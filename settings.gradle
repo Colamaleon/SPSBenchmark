@@ -1,0 +1,8 @@
+rootProject.name = 'SPSBenchmark'
+
+include ':SPSImpl'
+project(':SPSImpl').projectDir = new File('../SPSImpl')
+
+//include ':math'
+//project(':math').projectDir = new File('../math')
+
