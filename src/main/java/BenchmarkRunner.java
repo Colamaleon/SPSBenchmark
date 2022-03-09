@@ -20,27 +20,27 @@ public class BenchmarkRunner
         // Run test setup
         System.out.println("Warmup Benchmark");
         for (int i = 0; i < warmupIterations; i++)
-            TestCase(true);
+            testCase(true);
 
         System.out.println("Run Benchmark");
         long totalEvaluationTime = 0;
         long minEvaluationTime = Long.MAX_VALUE;
         long maxEvaluationTime = 0;
         for (int i = 0; i < testIterations; i++) {
-            long evalTime = TestCase(false);
+            long evalTime = testCase(false);
             totalEvaluationTime += evalTime;
             minEvaluationTime = Math.min(minEvaluationTime, evalTime);
             maxEvaluationTime = Math.max(maxEvaluationTime, evalTime);
         }
 
         System.out.println("Benchmark finished!");
-        System.out.println("Mean evaluation time: " + FormatEvaluationTimeInMs(totalEvaluationTime / testIterations));
-        System.out.println("Min evaluation time: " + FormatEvaluationTimeInMs(minEvaluationTime));
-        System.out.println("Max evaluation time: " + FormatEvaluationTimeInMs(maxEvaluationTime));
+        System.out.println("Mean evaluation time: " + formatEvaluationTimeInMs(totalEvaluationTime / testIterations));
+        System.out.println("Min evaluation time: " + formatEvaluationTimeInMs(minEvaluationTime));
+        System.out.println("Max evaluation time: " + formatEvaluationTimeInMs(maxEvaluationTime));
     }
 
 
-    public static long TestCase(boolean silent)
+    public static long testCase(boolean silent)
     {
         long referenceTime = 0;
         if (!silent) {
@@ -49,7 +49,7 @@ public class BenchmarkRunner
         }
 
         //TestKPW();
-        TestGroth();
+        testGroth();
 
         // Benchmark stop
         long timeToEvaluate = 0;
@@ -61,14 +61,14 @@ public class BenchmarkRunner
         return timeToEvaluate;
     }
 
-    public static String FormatEvaluationTimeInMs(long timeInNanoSeconds)
+    public static String formatEvaluationTimeInMs(long timeInNanoSeconds)
     {
         return timeInNanoSeconds / 1e-6 + "ms";
     }
 
     // TEST CASES
 
-    public static void TestKPW() {
+    public static void testKPW() {
         SPSKPW15PublicParameters pp = new SPSKPW15PublicParameterGen().generatePublicParameter(128, true, 1);
 
         SPSKPW15SignatureScheme scheme = new SPSKPW15SignatureScheme(pp);
@@ -80,7 +80,7 @@ public class BenchmarkRunner
     }
 
 
-    public static void TestGroth() {
+    public static void testGroth() {
 
         int securityParam = 128;
         SPSGroth15PublicParametersGen.Groth15Type type = SPSGroth15PublicParametersGen.Groth15Type.type1;
