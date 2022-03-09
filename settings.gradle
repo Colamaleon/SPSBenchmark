@@ -1,7 +1,9 @@
 rootProject.name = 'SPSBenchmark'
 
-include ':SPSImpl'
-project(':SPSImpl').projectDir = new File('../SPSImpl')
+//include ':SPSImpl'
+//project(':SPSImpl').projectDir = new File('../SPSImpl')
+
+includeBuild('../craco')
 
 //include ':math'
 //project(':math').projectDir = new File('../math')
