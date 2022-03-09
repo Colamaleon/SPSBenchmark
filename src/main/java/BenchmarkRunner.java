@@ -1,111 +1,77 @@
-import org.cryptimeleon.craco.common.plaintexts.GroupElementPlainText;
 import org.cryptimeleon.craco.common.plaintexts.MessageBlock;
-import org.cryptimeleon.craco.sig.Signature;
-import org.cryptimeleon.craco.sig.SignatureKeyPair;
-import org.cryptimeleon.craco.sig.sps.groth15.*;
-import org.cryptimeleon.craco.sig.sps.kpw15.*;
+import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15PublicParameters;
+import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15PublicParametersGen;
+import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15SignatureScheme;
+import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 import org.cryptimeleon.mclwrap.bn254.MclBilinearGroup;
+import spsbenchmark.BenchmarkConfig;
+import spsbenchmark.BenchmarkUtils;
+import spsbenchmark.MessageGenerator;
+import spsbenchmark.SPSBenchmark;
 
+/**
+ * prepares schemes for benchmark and provides entry point
+ */
 public class BenchmarkRunner
 {
 
-    SPSKPW15SignatureScheme s;
+    private static final int PREWARM_ITERATIONS = 20;
+    private static final int BM_ITERATIONS = 100;
+    private static final int MESSAGE_LENGTH = 32;
 
-    static final int warmupIterations = 100;
-    static final int testIterations = 5000;
+    // the bilinear group to use
+    private static final MclBilinearGroup.GroupChoice GROUP_CHOICE = MclBilinearGroup.GroupChoice.BN254;
+    private static BilinearGroup sharedBGroup;
 
+    // messages to sing. Set in either G1 or G2
+    private static MessageBlock[] group1MessageBlocks;
+    private static MessageBlock[] group2MessageBlocks;
 
+    /**
+     * the general config. Does not contain any messages.
+    */
+    private static BenchmarkConfig sharedConfig;
+
+    private static SPSBenchmark grothBM;
+
+    // go, benchmarks, go!
     public static void main(String[] args)
     {
-        // Run test setup
-        System.out.println("Warmup Benchmark");
-        for (int i = 0; i < warmupIterations; i++)
-            testCase(true);
+        prepareBenchmark();
 
-        System.out.println("Run Benchmark");
-        long totalEvaluationTime = 0;
-        long minEvaluationTime = Long.MAX_VALUE;
-        long maxEvaluationTime = 0;
-        for (int i = 0; i < testIterations; i++) {
-            long evalTime = testCase(false);
-            totalEvaluationTime += evalTime;
-            minEvaluationTime = Math.min(minEvaluationTime, evalTime);
-            maxEvaluationTime = Math.max(maxEvaluationTime, evalTime);
-        }
+        runGroth1Benchmark();
 
-        System.out.println("Benchmark finished!");
-        System.out.println("Mean evaluation time: " + formatEvaluationTimeInMs(totalEvaluationTime / testIterations));
-        System.out.println("Min evaluation time: " + formatEvaluationTimeInMs(minEvaluationTime));
-        System.out.println("Max evaluation time: " + formatEvaluationTimeInMs(maxEvaluationTime));
     }
 
+    /**
+     * prepares benchmarks by generating messages and initializing the first scheme instances
+     */
+    private static void prepareBenchmark() {
 
-    public static long testCase(boolean silent)
-    {
-        long referenceTime = 0;
-        if (!silent) {
-            // Benchmark start
-            referenceTime = System.nanoTime();
-        }
+        sharedBGroup = new MclBilinearGroup(GROUP_CHOICE);
+        sharedConfig = new BenchmarkConfig(null, sharedBGroup,
+                PREWARM_ITERATIONS, BM_ITERATIONS, MESSAGE_LENGTH);
 
-        //TestKPW();
-        testGroth();
+        // prepare message sets for both groups of {@code sharedBGroup}.
+        // These precompute automatically
+        group1MessageBlocks = MessageGenerator.prepareMessages(sharedBGroup.getG1(), BM_ITERATIONS, MESSAGE_LENGTH);
+        group2MessageBlocks = MessageGenerator.prepareMessages(sharedBGroup.getG2(), BM_ITERATIONS, MESSAGE_LENGTH);
 
-        // Benchmark stop
-        long timeToEvaluate = 0;
-        if (!silent) {
-            timeToEvaluate = System.nanoTime() - referenceTime;
-            //System.out.println("Time to evaluate: " + FormatEvaluationTimeInMs(timeToEvaluate));
-        }
-
-        return timeToEvaluate;
+        BenchmarkUtils.prettyPrintConfig(sharedConfig);
+        // set up complete
     }
 
-    public static String formatEvaluationTimeInMs(long timeInNanoSeconds)
-    {
-        return timeInNanoSeconds / 1e-6 + "ms";
+    /**
+     * runs a benchmark for the groth15 SPS scheme (signing G_1 elements)
+     */
+    private static void runGroth1Benchmark() {
+        SPSGroth15PublicParameters pp = new SPSGroth15PublicParametersGen().generatePublicParameter(
+                sharedBGroup, SPSGroth15PublicParametersGen.Groth15Type.type1, MESSAGE_LENGTH);
+
+        SPSGroth15SignatureScheme groth1Scheme = new SPSGroth15SignatureScheme(pp);
+
+        //run groth benchmark
+        grothBM = new SPSBenchmark(sharedConfig, group1MessageBlocks, groth1Scheme);
     }
 
-    // TEST CASES
-
-    public static void testKPW() {
-        SPSKPW15PublicParameters pp = new SPSKPW15PublicParameterGen().generatePublicParameter(128, true, 1);
-
-        SPSKPW15SignatureScheme scheme = new SPSKPW15SignatureScheme(pp);
-        SignatureKeyPair keys = scheme.generateKeyPair(1);
-
-        GroupElementPlainText message = new GroupElementPlainText(pp.getG1GroupGenerator().getStructure().getUniformlyRandomElement());
-        Signature sig = scheme.sign(new MessageBlock(message), keys.getSigningKey());
-        boolean foo = scheme.verify(new MessageBlock(message), sig, keys.getVerificationKey());
-    }
-
-
-    public static void testGroth() {
-
-        int securityParam = 128;
-        SPSGroth15PublicParametersGen.Groth15Type type = SPSGroth15PublicParametersGen.Groth15Type.type1;
-        int numberOfMessages = 10;
-
-        // setup scheme
-        SPSGroth15PublicParametersGen ppSetup = new SPSGroth15PublicParametersGen();
-
-        SPSGroth15PublicParameters pp = ppSetup.generatePublicParameter(new MclBilinearGroup(), type, numberOfMessages);
-        SPSGroth15SignatureScheme scheme = new SPSGroth15SignatureScheme(pp);
-
-        // generate two different key pairs to test
-        SignatureKeyPair<? extends SPSGroth15VerificationKey, ? extends SPSGroth15SigningKey> keyPair = scheme.generateKeyPair(
-                numberOfMessages);
-
-        // generate two different message blocks to test
-        GroupElementPlainText[] messages = new GroupElementPlainText[numberOfMessages];
-        for (int i = 0; i < messages.length; i++) {
-            messages[i] = new GroupElementPlainText(pp.getPlaintextGroupGenerator().getStructure().getUniformlyRandomElement());
-        }
-        MessageBlock messageBlock = new MessageBlock(messages);
-
-
-        // TODO
-
-        //return new SignatureSchemeParams(scheme, pp, messageBlock, wrongMessageBlock, keyPair, wrongKeyPair);
-    }
 }

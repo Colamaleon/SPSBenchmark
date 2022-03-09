@@ -17,7 +17,7 @@ import org.cryptimeleon.math.structures.groups.debug.DebugBilinearGroup;
 public class GrothVerifyCountingBenchmark {
 
     // Testing setup
-    public static final int[] messageLenghtSetups = new int[] { 1 };
+    public static final int[] messageLenghtSetups = new int[] { 100 };
     public static final int randomPrimeBitLength = 256;
     public static final int kpwSecurityParameter = 128;
 
