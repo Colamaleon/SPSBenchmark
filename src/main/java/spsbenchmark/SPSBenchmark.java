@@ -125,8 +125,9 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
     private void runTimeBenchmark(String bmName, IntConsumer targetFunction, boolean isPrewarm) {
 
         System.out.println(BenchmarkUtils.padString(
-                String.format("[START][TIME] %s %s benchmark...", bmName, (isPrewarm) ? "(pre-warm)" : "" ),
-                BenchmarkUtils.CONSOLE_WIDTH));
+                String.format("[START][TIME] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
+                        bmName,
+                        schemeBlueprint.getClass().getSimpleName())));
 
         if(isPrewarm) {
             // run without measuring
@@ -134,8 +135,9 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
                 targetFunction.accept(i);
             }
             System.out.println(BenchmarkUtils.padString(
-                    String.format("[DONE] (pre-warm) %s benchmark", bmName),
-                    BenchmarkUtils.CONSOLE_WIDTH));
+                    String.format("[DONE][TIME] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
+                            bmName,
+                            schemeBlueprint.getClass().getSimpleName())));
             System.out.println(BenchmarkUtils.padString(""));
         }else {
             // run and measure times
@@ -146,8 +148,9 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
             System.out.println(BenchmarkUtils.padString(""));
 
             System.out.println(BenchmarkUtils.padString(
-                    String.format("[DONE] %s benchmark", bmName),
-                    BenchmarkUtils.CONSOLE_WIDTH));
+                    String.format("[DONE][TIME] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
+                            bmName,
+                            schemeBlueprint.getClass().getSimpleName())));
             System.out.println(results.getPrettyString());
 
             System.out.println(BenchmarkUtils.separator());

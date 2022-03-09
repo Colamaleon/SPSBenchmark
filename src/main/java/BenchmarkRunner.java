@@ -65,6 +65,10 @@ public class BenchmarkRunner
      * runs a benchmark for the groth15 SPS scheme (signing G_1 elements)
      */
     private static void runGroth1Benchmark() {
+
+        BenchmarkUtils.padString(String.format("Benchmark scheme %s", SPSGroth15SignatureScheme.class.getSimpleName()));
+        System.out.println(BenchmarkUtils.separator());
+
         SPSGroth15PublicParameters pp = new SPSGroth15PublicParametersGen().generatePublicParameter(
                 sharedBGroup, SPSGroth15PublicParametersGen.Groth15Type.type1, MESSAGE_LENGTH);
 
