@@ -1,8 +1,8 @@
 package spsbenchmark;
 
 import org.cryptimeleon.craco.common.plaintexts.MessageBlock;
+import org.cryptimeleon.math.structures.groups.debug.DebugBilinearGroup;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
-import org.cryptimeleon.math.structures.groups.elliptic.BilinearMap;
 
 /**
  * stores a set of benchmark settings that should be shared among all schemes
@@ -11,9 +11,14 @@ import org.cryptimeleon.math.structures.groups.elliptic.BilinearMap;
 public class BenchmarkConfig {
 
     /**
-     * the bilinear map to use for benchmarking
+     * the bilinear map to use for timer benchmarks
      */
-    private BilinearGroup bGroup;
+    private BilinearGroup timerBGroup;
+
+    /**
+     * the bilinear map to use for counting benchmarks
+     */
+    private DebugBilinearGroup countingBGroup;
 
     /**
      * the amount of pre-warm iterations to use when benchmarking
@@ -31,8 +36,9 @@ public class BenchmarkConfig {
     private int messageLength;
 
 
-    public BenchmarkConfig(MessageBlock[] messages, BilinearGroup bGroup, int prewarmIterations, int runIterations, int messageLength) {
-        this.bGroup = bGroup;
+    public BenchmarkConfig(BilinearGroup timerBGroup, DebugBilinearGroup countingBGroup, int prewarmIterations, int runIterations, int messageLength) {
+        this.timerBGroup = timerBGroup;
+        this.countingBGroup = countingBGroup;
 
         // not that clean, but catches index issues when pre-warming
         if(prewarmIterations > runIterations) {
@@ -45,9 +51,11 @@ public class BenchmarkConfig {
         this.messageLength = messageLength;
     }
 
-    public BilinearGroup getbGroup() {
-        return bGroup;
+    public BilinearGroup getTimerBGroup() {
+        return timerBGroup;
     }
+
+    public DebugBilinearGroup getCountingBGroup() { return countingBGroup; }
 
     public int getPrewarmIterations() {
         return prewarmIterations;
@@ -62,22 +70,8 @@ public class BenchmarkConfig {
     }
 
 
-    /**
-     * Creates a config with different messages based on an exsisting one.
-     * This is useful to create equal configs for schemes with different message spaces
-     */
-    public BenchmarkConfig createIndividualCopy(MessageBlock[] messages) {
-        return new BenchmarkConfig(
-                messages,
-                this.bGroup,
-                this.prewarmIterations,
-                this.runIterations,
-                this.messageLength);
-    }
-
     public String toPrettyString() {
-        return String.format("%s @ %s iterations :: messageLength %s :: %s pre-warm",
-                bGroup.toString(),
+        return String.format("%s iterations :: messageLength %s :: %s pre-warm",
                 runIterations,
                 messageLength,
                 prewarmIterations);

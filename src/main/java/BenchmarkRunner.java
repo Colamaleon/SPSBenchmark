@@ -1,9 +1,9 @@
-import org.cryptimeleon.craco.common.PublicParameters;
 import org.cryptimeleon.craco.common.plaintexts.MessageBlock;
 import org.cryptimeleon.craco.sig.MultiMessageStructurePreservingSignatureScheme;
 import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15PublicParameters;
 import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15PublicParametersGen;
 import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15SignatureScheme;
+import org.cryptimeleon.math.structures.groups.debug.DebugBilinearGroup;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 import org.cryptimeleon.mclwrap.bn254.MclBilinearGroup;
 import spsbenchmark.BenchmarkConfig;
@@ -12,7 +12,6 @@ import spsbenchmark.MessageGenerator;
 import spsbenchmark.SPSBenchmark;
 
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 /**
  * prepares schemes for benchmark and provides entry point
@@ -26,11 +25,19 @@ public class BenchmarkRunner
 
     // the bilinear group to use
     private static final MclBilinearGroup.GroupChoice GROUP_CHOICE = MclBilinearGroup.GroupChoice.BN254;
-    private static BilinearGroup sharedBGroup;
+
+    private static BilinearGroup sharedTimerBGroup;
+
+    private static DebugBilinearGroup sharedCountingBGroup;
+
 
     // messages to sing. Set in either G1 or G2
     private static MessageBlock[] group1MessageBlocks;
     private static MessageBlock[] group2MessageBlocks;
+
+    private static MessageBlock[] group1CountingMessageBlocks;
+    private static MessageBlock[] group2CountingMessageBlocks;
+
 
     /**
      * the general config. Does not contain any messages.
@@ -39,13 +46,13 @@ public class BenchmarkRunner
 
     private static SPSBenchmark grothBM;
 
+
     // go, benchmarks, go!
     public static void main(String[] args)
     {
         prepareBenchmark();
 
         runGroth1Benchmark();
-
     }
 
     /**
@@ -53,16 +60,22 @@ public class BenchmarkRunner
      */
     private static void prepareBenchmark() {
 
-        sharedBGroup = new MclBilinearGroup(GROUP_CHOICE);
-        sharedConfig = new BenchmarkConfig(null, sharedBGroup,
+        sharedTimerBGroup = new MclBilinearGroup(GROUP_CHOICE);
+        sharedCountingBGroup = new DebugBilinearGroup(sharedTimerBGroup.size(), BilinearGroup.Type.TYPE_3);
+
+        sharedConfig = new BenchmarkConfig(sharedTimerBGroup, sharedCountingBGroup,
                 PREWARM_ITERATIONS, BM_ITERATIONS, MESSAGE_LENGTH);
 
         // prepare message sets for both groups of {@code sharedBGroup}.
         // These precompute automatically
-        group1MessageBlocks = MessageGenerator.prepareMessages(sharedBGroup.getG1(), BM_ITERATIONS, MESSAGE_LENGTH);
-        group2MessageBlocks = MessageGenerator.prepareMessages(sharedBGroup.getG2(), BM_ITERATIONS, MESSAGE_LENGTH);
+        group1MessageBlocks = MessageGenerator.prepareMessages(sharedTimerBGroup.getG1(), BM_ITERATIONS, MESSAGE_LENGTH);
+        group2MessageBlocks = MessageGenerator.prepareMessages(sharedTimerBGroup.getG2(), BM_ITERATIONS, MESSAGE_LENGTH);
 
-        BenchmarkUtils.prettyPrintConfig(sharedConfig);
+        group1CountingMessageBlocks = MessageGenerator.prepareMessages(
+                sharedCountingBGroup.getG1(), BM_ITERATIONS, MESSAGE_LENGTH);
+        group2CountingMessageBlocks = MessageGenerator.prepareMessages(
+                sharedCountingBGroup.getG2(), BM_ITERATIONS, MESSAGE_LENGTH);
+
         // set up complete
     }
 
@@ -86,8 +99,11 @@ public class BenchmarkRunner
                 return new SPSGroth15SignatureScheme(params);
         };
 
-        //run groth benchmark
-        grothBM = new SPSBenchmark(sharedConfig, group1MessageBlocks, constructionDelegate);
+        //run groth benchmark in timing mode
+        grothBM = new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, group1MessageBlocks, constructionDelegate);
+
+        //run groth benchmark in counting mode
+        grothBM = new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, group1CountingMessageBlocks, constructionDelegate);
     }
 
 

@@ -1,16 +1,10 @@
 package spsbenchmark;
 
-import org.cryptimeleon.craco.common.PublicParameters;
 import org.cryptimeleon.craco.common.plaintexts.MessageBlock;
-import org.cryptimeleon.craco.sig.MultiMessageStructurePreservingSignatureScheme;
-import org.cryptimeleon.craco.sig.Signature;
-import org.cryptimeleon.craco.sig.SignatureKeyPair;
+import org.cryptimeleon.craco.sig.*;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 
-import javax.swing.*;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.IntConsumer;
 
 /**
@@ -18,6 +12,8 @@ import java.util.function.IntConsumer;
  * and runs its benchmarks
  */
 public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSignatureScheme> {
+
+    public enum BenchmarkMode {Time,Counting};
 
     // these are given on start up
 
@@ -31,16 +27,16 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
      * using a {@code BilinearGroup} and the intended messageLength.
      * This allows us to bundle the calculation of the public parameters and the initialization of the scheme-instance.
      */
-    private BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction;
+    private final BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction;
 
     /**
-     * the instance of the signature scheme to initialize copies with.
+     * the instance of the signature scheme used for benchmarks
      */
-    private MultiMessageStructurePreservingSignatureScheme schemeBlueprint;
+    private final MultiMessageStructurePreservingSignatureScheme schemeBlueprint;
+
 
     /**
-     * the messages to run the benchmark with. might differ between schemes
-     * to account for different message spaces.
+     * the messages to run the timer benchmark with.
      */
     private final MessageBlock[] messages;
 
@@ -53,21 +49,34 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
 
 
     public SPSBenchmark(BenchmarkConfig config,
+                        BenchmarkMode mode,
                         MessageBlock[] messages,
                         BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction) {
+
+        BenchmarkUtils.prettyPrintConfig(config, mode);
+
         this.config = config;
         this.messages = messages;
 
         //set up function to generate new scheme instances
         this.schemeSetupFunction = schemeSetupFunction;
-        //build one initial instance of our scheme
-        this.schemeBlueprint = schemeSetupFunction.apply(config.getbGroup(), config.getMessageLength());
+
+        // pick the appropriate bilinear group based on the current mode
+        BilinearGroup bGroup = (mode == BenchmarkMode.Counting) ? config.getCountingBGroup() : config.getTimerBGroup();
+
+        //instantiate the scheme
+        this.schemeBlueprint = schemeSetupFunction.apply(bGroup, config.getMessageLength());
 
         //set up arrays for storage
         this.bmKeyPairs = new SignatureKeyPair[config.getRunIterations()];
         this.bmSignatures = new Signature[config.getRunIterations()];
 
-        runTimedBenchmarks();
+        if(mode == BenchmarkMode.Time) {
+            runTimedBenchmarks();
+        }
+        else if(mode == BenchmarkMode.Counting) {
+            runCountingBenchmarks();
+        }
     }
 
     /**
@@ -183,13 +192,14 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
         runTimeBenchmark(bmName, targetFunction, false);
     }
 
+
     /**
      * initializes the scheme a single time.
      * Uses the provided bilinear group and the provided construction delegate to do so.
      */
     private void runSetup(int iterationNumber) {
         MultiMessageStructurePreservingSignatureScheme tempSchemeInstance
-                = schemeSetupFunction.apply(config.getbGroup(), config.getMessageLength());
+                = schemeSetupFunction.apply(config.getTimerBGroup(), config.getMessageLength());
     }
 
     /**
@@ -220,6 +230,67 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
         schemeBlueprint.verify(messages[iterationNumber],
                 bmSignatures[iterationNumber],
                 bmKeyPairs[iterationNumber].getVerificationKey());
+    }
+
+    // Counting benchmarks
+
+    /**
+     * Run all steps required for a signature scheme (i.e. setup, keyGen, sign, verify)
+     * the specified number of times (see {@code config.runIterations}) -
+     * tracking the number of group operations
+     */
+    private void runCountingBenchmarks() {
+
+        // setup
+        runCountingBenchmark("setup", this::runSetup);
+
+        // keyGen
+        runCountingBenchmark("keyGen", this::runKeyGen);
+
+        // sign
+        runCountingBenchmark("sign", this::runSign);
+
+        // verify
+        runCountingBenchmark("verify", this::runVerify);
+
+    }
+
+    /**
+     * runs the target function using the debug group; counting the group operations used.
+     */
+    private void runCountingBenchmark(String bmName, IntConsumer targetFunction, boolean isPrewarm) {
+
+        System.out.println(BenchmarkUtils.padString(
+                String.format("[START][COUNT] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
+                        bmName,
+                        schemeBlueprint.getClass().getSimpleName())));
+
+        if(isPrewarm) {
+            for (int i = 0; i < config.getPrewarmIterations(); i++) {
+                //run the function for pre-warming
+                targetFunction.accept(i);
+            }
+        }
+        else {
+            for (int i = 0; i < config.getRunIterations(); i++) {
+                //run the function, this time counting the group operations
+                config.getCountingBGroup().resetCounters();
+                targetFunction.accept(i);
+            }
+
+            // print results
+            System.out.println(BenchmarkUtils.padString(
+                    String.format("[DONE][COUNT] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
+                            bmName,
+                            schemeBlueprint.getClass().getSimpleName())));
+
+            System.out.println(config.getCountingBGroup().formatCounterDataAllBuckets());
+        }
+    }
+
+    private void runCountingBenchmark(String bmName, IntConsumer targetFunction) {
+        runCountingBenchmark(bmName,targetFunction,true);
+        runCountingBenchmark(bmName,targetFunction,false);
     }
 
 

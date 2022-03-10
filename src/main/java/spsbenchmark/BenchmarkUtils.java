@@ -35,12 +35,19 @@ public class BenchmarkUtils {
     /**
      * prints the given config with nice formatting
      */
-    public static void prettyPrintConfig(BenchmarkConfig config) {
+    public static void prettyPrintConfig(BenchmarkConfig config, SPSBenchmark.BenchmarkMode mode) {
 
         System.out.println(separator());
 
-        String startMessage = "Running benchmark with config... ";
+        String startMessage = String.format("Running %s benchmark with config... ",
+                (mode == SPSBenchmark.BenchmarkMode.Counting) ? "[Counting]" : "[Timer]");
+
         System.out.println(padString(startMessage, CONSOLE_WIDTH));
+
+        System.out.println(padString((mode == SPSBenchmark.BenchmarkMode.Counting) ?
+                config.getCountingBGroup().getClass().getSimpleName() :
+                config.getTimerBGroup().toString() ,CONSOLE_WIDTH));
+
         System.out.println(padString(config.toPrettyString(),CONSOLE_WIDTH));
 
         System.out.println(separator());
