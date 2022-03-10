@@ -1,11 +1,16 @@
 package spsbenchmark;
 
+import org.cryptimeleon.craco.common.PublicParameters;
 import org.cryptimeleon.craco.common.plaintexts.MessageBlock;
 import org.cryptimeleon.craco.sig.MultiMessageStructurePreservingSignatureScheme;
 import org.cryptimeleon.craco.sig.Signature;
 import org.cryptimeleon.craco.sig.SignatureKeyPair;
+import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 
 import javax.swing.*;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.IntConsumer;
 
 /**
@@ -17,14 +22,21 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
     // these are given on start up
 
     /**
-     * defines the parameters of the benchmark
+     * defines the shared parameters of the benchmark
      */
     private final BenchmarkConfig config;
 
     /**
+     * points to a function that constructs a new instance of the scheme
+     * using a {@code BilinearGroup} and the intended messageLength.
+     * This allows us to bundle the calculation of the public parameters and the initialization of the scheme-instance.
+     */
+    private BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction;
+
+    /**
      * the instance of the signature scheme to initialize copies with.
      */
-    private final MultiMessageStructurePreservingSignatureScheme schemeBlueprint;
+    private MultiMessageStructurePreservingSignatureScheme schemeBlueprint;
 
     /**
      * the messages to run the benchmark with. might differ between schemes
@@ -40,11 +52,16 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
     private Signature[] bmSignatures;
 
 
-    public SPSBenchmark(BenchmarkConfig config, MessageBlock[] messages,
-                        MultiMessageStructurePreservingSignatureScheme blueprint) {
+    public SPSBenchmark(BenchmarkConfig config,
+                        MessageBlock[] messages,
+                        BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction) {
         this.config = config;
         this.messages = messages;
-        this.schemeBlueprint = blueprint;
+
+        //set up function to generate new scheme instances
+        this.schemeSetupFunction = schemeSetupFunction;
+        //build one initial instance of our scheme
+        this.schemeBlueprint = schemeSetupFunction.apply(config.getbGroup(), config.getMessageLength());
 
         //set up arrays for storage
         this.bmKeyPairs = new SignatureKeyPair[config.getRunIterations()];
@@ -78,7 +95,7 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
      * Runs the given method n times and
      * measures the min, max and average time to complete of all {@param iterations}.
      */
-    private BenchmarkTimes measureStepTimes(IntConsumer targetMethod, int iterations) {
+    private BenchmarkTimes measureStepTimes(IntConsumer targetMethod) {
 
         // store measurements
         double sumTime = 0;
@@ -141,7 +158,7 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
             System.out.println(BenchmarkUtils.padString(""));
         }else {
             // run and measure times
-            BenchmarkTimes results = measureStepTimes(targetFunction, config.getRunIterations());
+            BenchmarkTimes results = measureStepTimes(targetFunction);
 
 
             // print results
@@ -167,10 +184,12 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
     }
 
     /**
-     * initializes the scheme a single time
+     * initializes the scheme a single time.
+     * Uses the provided bilinear group and the provided construction delegate to do so.
      */
     private void runSetup(int iterationNumber) {
-        //TODO
+        MultiMessageStructurePreservingSignatureScheme tempSchemeInstance
+                = schemeSetupFunction.apply(config.getbGroup(), config.getMessageLength());
     }
 
     /**

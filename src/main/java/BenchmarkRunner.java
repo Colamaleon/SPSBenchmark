@@ -1,4 +1,6 @@
+import org.cryptimeleon.craco.common.PublicParameters;
 import org.cryptimeleon.craco.common.plaintexts.MessageBlock;
+import org.cryptimeleon.craco.sig.MultiMessageStructurePreservingSignatureScheme;
 import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15PublicParameters;
 import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15PublicParametersGen;
 import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15SignatureScheme;
@@ -8,6 +10,9 @@ import spsbenchmark.BenchmarkConfig;
 import spsbenchmark.BenchmarkUtils;
 import spsbenchmark.MessageGenerator;
 import spsbenchmark.SPSBenchmark;
+
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
  * prepares schemes for benchmark and provides entry point
@@ -63,19 +68,27 @@ public class BenchmarkRunner
 
     /**
      * runs a benchmark for the groth15 SPS scheme (signing G_1 elements)
+     *
+     * Note: the java compiler doesn't like the unchecked casting of the constructionDelegate to the required type.
+     *       The warning is disabled however, since this is the only context in which we use this function.
      */
+    @SuppressWarnings("unchecked")
     private static void runGroth1Benchmark() {
 
         BenchmarkUtils.padString(String.format("Benchmark scheme %s", SPSGroth15SignatureScheme.class.getSimpleName()));
         System.out.println(BenchmarkUtils.separator());
 
-        SPSGroth15PublicParameters pp = new SPSGroth15PublicParametersGen().generatePublicParameter(
-                sharedBGroup, SPSGroth15PublicParametersGen.Groth15Type.type1, MESSAGE_LENGTH);
-
-        SPSGroth15SignatureScheme groth1Scheme = new SPSGroth15SignatureScheme(pp);
+        // defines a delegate function that constructs an instance of the scheme for us
+        BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> constructionDelegate
+                = (bGroup, messageLength) -> {
+                SPSGroth15PublicParameters params = new SPSGroth15PublicParametersGen().generatePublicParameter(
+                        bGroup, SPSGroth15PublicParametersGen.Groth15Type.type1, messageLength);
+                return new SPSGroth15SignatureScheme(params);
+        };
 
         //run groth benchmark
-        grothBM = new SPSBenchmark(sharedConfig, group1MessageBlocks, groth1Scheme);
+        grothBM = new SPSBenchmark(sharedConfig, group1MessageBlocks, constructionDelegate);
     }
+
 
 }
