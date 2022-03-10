@@ -7,7 +7,7 @@ import org.cryptimeleon.math.structures.groups.debug.DebugBilinearGroup;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 import org.cryptimeleon.mclwrap.bn254.MclBilinearGroup;
 import spsbenchmark.BenchmarkConfig;
-import spsbenchmark.BenchmarkUtils;
+import spsbenchmark.PrintBenchmarkUtils;
 import spsbenchmark.MessageGenerator;
 import spsbenchmark.SPSBenchmark;
 
@@ -19,8 +19,8 @@ import java.util.function.BiFunction;
 public class BenchmarkRunner
 {
 
-    private static final int PREWARM_ITERATIONS = 20;
-    private static final int BM_ITERATIONS = 100;
+    private static final int PREWARM_ITERATIONS = 200;
+    private static final int BM_ITERATIONS = 1000;
     private static final int MESSAGE_LENGTH = 32;
 
     // the bilinear group to use
@@ -88,8 +88,8 @@ public class BenchmarkRunner
     @SuppressWarnings("unchecked")
     private static void runGroth1Benchmark() {
 
-        BenchmarkUtils.padString(String.format("Benchmark scheme %s", SPSGroth15SignatureScheme.class.getSimpleName()));
-        System.out.println(BenchmarkUtils.separator());
+        PrintBenchmarkUtils.padString(String.format("Benchmark scheme %s", SPSGroth15SignatureScheme.class.getSimpleName()));
+        PrintBenchmarkUtils.printSeparator();
 
         // defines a delegate function that constructs an instance of the scheme for us
         BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> constructionDelegate

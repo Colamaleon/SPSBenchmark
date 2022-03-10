@@ -1,12 +1,10 @@
 package spsbenchmark;
 
-import org.cryptimeleon.craco.sig.SignatureScheme;
-
 /**
  * A collection of utilities for running banchmarks
  *
  */
-public class BenchmarkUtils {
+public class PrintBenchmarkUtils {
 
     public static final int CONSOLE_WIDTH = 120;
 
@@ -30,6 +28,13 @@ public class BenchmarkUtils {
      */
     public static String separator() {
         return padString("", CONSOLE_WIDTH).replace(" ", "-");
+    }
+
+    /**
+     * prints a long line
+     */
+    public static void printSeparator() {
+        System.out.println(separator());
     }
 
     /**

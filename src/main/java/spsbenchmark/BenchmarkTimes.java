@@ -26,11 +26,11 @@ public class BenchmarkTimes {
     }
 
     public String getPrettyString() {
-        return BenchmarkUtils.padString(String.format("*** Times measured :: avg: %s  |  min: %s  |  max: %s  | total: %s",
+        return PrintBenchmarkUtils.padString(String.format("*** Times measured :: avg: %s  |  min: %s  |  max: %s  | total: %s",
                 formatTimeInMs(avgTime),
                 formatTimeInMs(minTime),
                 formatTimeInMs(maxTime),
-                formatTimeInMs(sumTime)), BenchmarkUtils.CONSOLE_WIDTH);
+                formatTimeInMs(sumTime)), PrintBenchmarkUtils.CONSOLE_WIDTH);
     }
 
 }

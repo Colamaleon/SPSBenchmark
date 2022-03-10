@@ -53,7 +53,7 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
                         MessageBlock[] messages,
                         BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction) {
 
-        BenchmarkUtils.prettyPrintConfig(config, mode);
+        PrintBenchmarkUtils.prettyPrintConfig(config, mode);
 
         this.config = config;
         this.messages = messages;
@@ -150,7 +150,7 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
      */
     private void runTimeBenchmark(String bmName, IntConsumer targetFunction, boolean isPrewarm) {
 
-        System.out.println(BenchmarkUtils.padString(
+        System.out.println(PrintBenchmarkUtils.padString(
                 String.format("[START][TIME] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
                         bmName,
                         schemeBlueprint.getClass().getSimpleName())));
@@ -160,27 +160,27 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
             for (int i = 0; i < config.getPrewarmIterations(); i++) {
                 targetFunction.accept(i);
             }
-            System.out.println(BenchmarkUtils.padString(
+            System.out.println(PrintBenchmarkUtils.padString(
                     String.format("[DONE][TIME] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
                             bmName,
                             schemeBlueprint.getClass().getSimpleName())));
-            System.out.println(BenchmarkUtils.padString(""));
+            System.out.println(PrintBenchmarkUtils.padString(""));
         }else {
             // run and measure times
             BenchmarkTimes results = measureStepTimes(targetFunction);
 
 
             // print results
-            System.out.println(BenchmarkUtils.padString(""));
+            System.out.println(PrintBenchmarkUtils.padString(""));
 
-            System.out.println(BenchmarkUtils.padString(
+            System.out.println(PrintBenchmarkUtils.padString(
                     String.format("[DONE][TIME] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
                             bmName,
                             schemeBlueprint.getClass().getSimpleName())));
             System.out.println(results.getPrettyString());
 
-            System.out.println(BenchmarkUtils.separator());
-            System.out.println(BenchmarkUtils.separator());
+            PrintBenchmarkUtils.printSeparator();
+            PrintBenchmarkUtils.printSeparator();
         }
     }
 
@@ -260,7 +260,7 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
      */
     private void runCountingBenchmark(String bmName, IntConsumer targetFunction, boolean isPrewarm) {
 
-        System.out.println(BenchmarkUtils.padString(
+        System.out.println(PrintBenchmarkUtils.padString(
                 String.format("[START][COUNT] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
                         bmName,
                         schemeBlueprint.getClass().getSimpleName())));
@@ -272,14 +272,14 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
             }
         }
         else {
-            for (int i = 0; i < config.getRunIterations(); i++) {
-                //run the function, this time counting the group operations
-                config.getCountingBGroup().resetCounters();
-                targetFunction.accept(i);
-            }
+
+            //run the function, this time counting the group operations.
+            // Only needs to run on once
+            config.getCountingBGroup().resetCounters();
+            targetFunction.accept(0);
 
             // print results
-            System.out.println(BenchmarkUtils.padString(
+            System.out.println(PrintBenchmarkUtils.padString(
                     String.format("[DONE][COUNT] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
                             bmName,
                             schemeBlueprint.getClass().getSimpleName())));
