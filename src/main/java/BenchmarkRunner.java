@@ -19,8 +19,8 @@ import java.util.function.BiFunction;
 public class BenchmarkRunner
 {
 
-    private static final int PREWARM_ITERATIONS = 200;
-    private static final int BM_ITERATIONS = 1000;
+    private static final int PREWARM_ITERATIONS = 20;
+    private static final int BM_ITERATIONS = 100;
     private static final int MESSAGE_LENGTH = 32;
 
     // the bilinear group to use

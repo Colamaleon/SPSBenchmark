@@ -4,12 +4,15 @@ import org.cryptimeleon.craco.common.plaintexts.MessageBlock;
 import org.cryptimeleon.craco.sig.*;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.IntConsumer;
 
 /**
- * Initializes a benchmark for a given scheme
- * and runs its benchmarks
+ * Initializes a benchmark for a given scheme.
+ * The Benchmark will either time each of the signature's functions
+ * or
+ * Run the scheme a single time, counting the group operations required in each step
  */
 public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSignatureScheme> {
 
@@ -53,6 +56,7 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
                         MessageBlock[] messages,
                         BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction) {
 
+        // print the config
         PrintBenchmarkUtils.prettyPrintConfig(config, mode);
 
         this.config = config;
@@ -71,76 +75,85 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
         this.bmKeyPairs = new SignatureKeyPair[config.getRunIterations()];
         this.bmSignatures = new Signature[config.getRunIterations()];
 
-        if(mode == BenchmarkMode.Time) {
-            runTimedBenchmarks();
-        }
-        else if(mode == BenchmarkMode.Counting) {
-            runCountingBenchmarks();
-        }
+        // run the appropriate benchmark
+        autoRunBenchmark(mode);
     }
+
 
     /**
      * Run all steps required for a signature scheme (i.e. setup, keyGen, sign, verify)
-     * the specified number of times (see {@code config.runIterations}) -
-     * tracking the completion times for each step
+     * the specified number of times (see {@code config.runIterations}) for timing and once for counting -
+     * tracking the appropriate statistic
      */
-    private void runTimedBenchmarks() {
+    private void autoRunBenchmark(BenchmarkMode mode) {
+
+        //pick either the timing or counting benchmark function
+        BiConsumer<String,IntConsumer> benchmarkFunc = (mode == BenchmarkMode.Counting) ?
+                this::runCountingBenchmark : this::runTimeBenchmark ;
 
         // setup
-        runTimeBenchmark("setup", this::runSetup);
+        benchmarkFunc.accept("setup", this::runSetup);
 
         // keyGen
-        runTimeBenchmark("keyGen", this::runKeyGen);
+        benchmarkFunc.accept("keyGen", this::runKeyGen);
 
         // sign
-        runTimeBenchmark("sign", this::runSign);
+        benchmarkFunc.accept("sign", this::runSign);
 
         // verify
-        runTimeBenchmark("verify", this::runVerify);
+        benchmarkFunc.accept("verify", this::runVerify);
 
+    }
+
+
+
+
+    // benchmark steps
+
+
+    /**
+     * initializes the scheme a single time.
+     * Uses the provided bilinear group and the provided construction delegate to do so.
+     */
+    private void runSetup(int iterationNumber) {
+        MultiMessageStructurePreservingSignatureScheme tempSchemeInstance
+                = schemeSetupFunction.apply(config.getTimerBGroup(), config.getMessageLength());
     }
 
     /**
-     * Runs the given method n times and
-     * measures the min, max and average time to complete of all {@param iterations}.
+     * generates a keyPair using the blueprint instance and stores it for later use
+     * {@param iterationNumber} determines where to store the generated key.
      */
-    private BenchmarkTimes measureStepTimes(IntConsumer targetMethod) {
-
-        // store measurements
-        double sumTime = 0;
-        double minTime = Double.MAX_VALUE;
-        double maxTime = Double.MIN_VALUE;
-
-        // times used for tracking
-        double refTime = -1;
-        double finishTime = -1;
-
-        for (int i = 0; i < config.getRunIterations(); i++) {
-            //begin counting here
-            refTime = System.nanoTime();
-
-            // run method to benchmark
-            targetMethod.accept(i);
-
-            //check time
-            finishTime = System.nanoTime();
-
-            double delta = finishTime - refTime;
-
-            if(delta < minTime) {
-                minTime = delta;
-            }
-
-            if(delta > maxTime) {
-                maxTime = delta;
-            }
-
-            sumTime += delta;
-        }
-
-        // output times
-        return new BenchmarkTimes(minTime, maxTime, sumTime, sumTime / config.getRunIterations());
+    private void runKeyGen(int iterationNumber) {
+        SignatureKeyPair keyPair = schemeBlueprint.generateKeyPair(config.getMessageLength());
+        bmKeyPairs[iterationNumber] = keyPair;
     }
+
+    /**
+     * signs the {@param iterationNumber}s MessageBlock and stores the resulting signature for later use
+     * {@param iterationNumber} determines where to store the generated key.
+     */
+    private void runSign(int iterationNumber) {
+        Signature sigma = schemeBlueprint.sign(bmKeyPairs[iterationNumber].getSigningKey(), messages[iterationNumber]);
+        bmSignatures[iterationNumber] = sigma;
+    }
+
+    /**
+     * verifies the {@param iterationNumber}s MessageBlock
+     * {@param iterationNumber} determines where to store the generated key.
+     */
+    private void runVerify(int iterationNumber) {
+
+        // verify the signature
+        schemeBlueprint.verify(messages[iterationNumber],
+                bmSignatures[iterationNumber],
+                bmKeyPairs[iterationNumber].getVerificationKey());
+    }
+
+
+
+
+    // Timer benchmarks
 
 
     /**
@@ -192,68 +205,53 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
         runTimeBenchmark(bmName, targetFunction, false);
     }
 
-
     /**
-     * initializes the scheme a single time.
-     * Uses the provided bilinear group and the provided construction delegate to do so.
+     * Runs the given method {@code config.getRunIterations()} times and
+     * measures the min, max and average time to complete of all {@param iterations}.
      */
-    private void runSetup(int iterationNumber) {
-        MultiMessageStructurePreservingSignatureScheme tempSchemeInstance
-                = schemeSetupFunction.apply(config.getTimerBGroup(), config.getMessageLength());
+    private BenchmarkTimes measureStepTimes(IntConsumer targetMethod) {
+
+        // store measurements
+        double sumTime = 0;
+        double minTime = Double.MAX_VALUE;
+        double maxTime = Double.MIN_VALUE;
+
+        // times used for tracking
+        double refTime = -1;
+        double finishTime = -1;
+
+        for (int i = 0; i < config.getRunIterations(); i++) {
+            //begin counting here
+            refTime = System.nanoTime();
+
+            // run method to benchmark
+            targetMethod.accept(i);
+
+            //check time
+            finishTime = System.nanoTime();
+
+            double delta = finishTime - refTime;
+
+            if(delta < minTime) {
+                minTime = delta;
+            }
+
+            if(delta > maxTime) {
+                maxTime = delta;
+            }
+
+            sumTime += delta;
+        }
+
+        // output times
+        return new BenchmarkTimes(minTime, maxTime, sumTime, sumTime / config.getRunIterations());
     }
 
-    /**
-     * generates a keyPair using the blueprint instance and stores it for later use
-     * {@param iterationNumber} determines where to store the generated key.
-     */
-    private void runKeyGen(int iterationNumber) {
-        SignatureKeyPair keyPair = schemeBlueprint.generateKeyPair(config.getMessageLength());
-        bmKeyPairs[iterationNumber] = keyPair;
-    }
 
-    /**
-     * signs the {@param iterationNumber}s MessageBlock and stores the resulting signature for later use
-     * {@param iterationNumber} determines where to store the generated key.
-     */
-    private void runSign(int iterationNumber) {
-        Signature sigma = schemeBlueprint.sign(bmKeyPairs[iterationNumber].getSigningKey(), messages[iterationNumber]);
-        bmSignatures[iterationNumber] = sigma;
-    }
 
-    /**
-     * verifies the {@param iterationNumber}s MessageBlock
-     * {@param iterationNumber} determines where to store the generated key.
-     */
-    private void runVerify(int iterationNumber) {
-
-        // verify the signature
-        schemeBlueprint.verify(messages[iterationNumber],
-                bmSignatures[iterationNumber],
-                bmKeyPairs[iterationNumber].getVerificationKey());
-    }
 
     // Counting benchmarks
 
-    /**
-     * Run all steps required for a signature scheme (i.e. setup, keyGen, sign, verify)
-     * the specified number of times (see {@code config.runIterations}) -
-     * tracking the number of group operations
-     */
-    private void runCountingBenchmarks() {
-
-        // setup
-        runCountingBenchmark("setup", this::runSetup);
-
-        // keyGen
-        runCountingBenchmark("keyGen", this::runKeyGen);
-
-        // sign
-        runCountingBenchmark("sign", this::runSign);
-
-        // verify
-        runCountingBenchmark("verify", this::runVerify);
-
-    }
 
     /**
      * runs the target function using the debug group; counting the group operations used.
