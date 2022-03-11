@@ -2,6 +2,7 @@ package spsbenchmark;
 
 import org.cryptimeleon.craco.common.plaintexts.MessageBlock;
 import org.cryptimeleon.craco.sig.*;
+import org.cryptimeleon.math.serialization.Representation;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 
 import java.util.function.BiConsumer;
@@ -116,6 +117,14 @@ public class SPSBenchmark {
         // verify
         benchmarkFunc.accept("verify", this::runVerify);
 
+        if(mode == BenchmarkMode.Counting) {
+            // print results of counting
+            System.out.println(PrintBenchmarkUtils.padString(
+                    String.format("[DONE][COUNT] [%s] benchmarks...",
+                            schemeBlueprint.getClass().getSimpleName())));
+
+            System.out.println(config.getCountingBGroup().formatCounterDataAllBuckets());
+        }
     }
 
 
@@ -133,6 +142,7 @@ public class SPSBenchmark {
 
         MultiMessageStructurePreservingSignatureScheme tempSchemeInstance
                 = schemeSetupFunction.apply(targetGroup, config.getMessageLength());
+
         bmSchemeInstances[iterationNumber] = tempSchemeInstance;
     }
 
@@ -142,7 +152,22 @@ public class SPSBenchmark {
      */
     private void runKeyGen(int iterationNumber) {
         SignatureKeyPair keyPair = bmSchemeInstances[0].generateKeyPair(config.getMessageLength());
-        bmKeyPairs[iterationNumber] = keyPair;
+
+        if(mode == BenchmarkMode.Time) {
+            bmKeyPairs[iterationNumber] = keyPair;
+        }
+        else if(mode == BenchmarkMode.Counting) {
+            //if we're running in counting mode, force serialization/deserialization once
+            Representation skRepr = keyPair.getSigningKey().getRepresentation();
+            Representation vkRepr = keyPair.getVerificationKey().getRepresentation();
+            bmKeyPairs[iterationNumber] = new SignatureKeyPair(
+                    bmSchemeInstances[iterationNumber].restoreVerificationKey(vkRepr),
+                    bmSchemeInstances[iterationNumber].restoreSigningKey(skRepr));
+        }
+        else {
+            // only support counting or timer mode
+            throw new IllegalArgumentException("SPSBenchmark may only run in Time or Counting mode");
+        }
     }
 
     /**
@@ -153,7 +178,19 @@ public class SPSBenchmark {
         // [!] signs using different scheme instances, but with same signing key for all messages
         Signature sigma = bmSchemeInstances[0]
                 .sign(bmKeyPairs[0].getSigningKey(), messages[iterationNumber]);
-        bmSignatures[iterationNumber] = sigma;
+
+        if(mode == BenchmarkMode.Time) {
+            bmSignatures[iterationNumber] = sigma;
+        }
+        else if(mode == BenchmarkMode.Counting) {
+            //if we're running in counting mode, force serialization/deserialization once
+            Representation repr = sigma.getRepresentation();
+            bmSignatures[iterationNumber] = bmSchemeInstances[iterationNumber].restoreSignature(repr);
+        }
+        else {
+            // only support counting or timer mode
+            throw new IllegalArgumentException("SPSBenchmark may only run in Time or Counting mode");
+        }
     }
 
     /**
@@ -291,16 +328,9 @@ public class SPSBenchmark {
 
             //run the function, this time counting the group operations.
             // Only needs to run on once
+            config.getCountingBGroup().setBucket(bmName);
             config.getCountingBGroup().resetCounters();
             targetFunction.accept(0);
-
-            // print results
-            System.out.println(PrintBenchmarkUtils.padString(
-                    String.format("[DONE][COUNT] %s [%s] benchmark...",
-                            bmName,
-                            schemeBlueprint.getClass().getSimpleName())));
-
-            System.out.println(config.getCountingBGroup().formatCounterDataAllBuckets());
         }
     }
 
