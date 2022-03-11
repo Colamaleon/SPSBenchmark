@@ -1,16 +1,25 @@
 import org.cryptimeleon.craco.common.plaintexts.MessageBlock;
 import org.cryptimeleon.craco.sig.MultiMessageStructurePreservingSignatureScheme;
+import org.cryptimeleon.craco.sig.sps.SPSPublicParametersGen;
+import org.cryptimeleon.craco.sig.sps.agho11.SPSAGHO11PublicParameters;
+import org.cryptimeleon.craco.sig.sps.agho11.SPSAGHO11PublicParametersGen;
+import org.cryptimeleon.craco.sig.sps.agho11.SPSAGHO11SignatureScheme;
+import org.cryptimeleon.craco.sig.sps.akot15.AKOT15SharedPublicParameters;
+import org.cryptimeleon.craco.sig.sps.akot15.fsp2.SPSFSP2SignatureScheme;
 import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15PublicParameters;
 import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15PublicParametersGen;
 import org.cryptimeleon.craco.sig.sps.groth15.SPSGroth15SignatureScheme;
+import org.cryptimeleon.craco.sig.sps.kpw15.SPSKPW15PublicParameters;
+import org.cryptimeleon.craco.sig.sps.kpw15.SPSKPW15SignatureScheme;
 import org.cryptimeleon.math.structures.groups.debug.DebugBilinearGroup;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 import org.cryptimeleon.mclwrap.bn254.MclBilinearGroup;
 import spsbenchmark.BenchmarkConfig;
-import spsbenchmark.PrintBenchmarkUtils;
 import spsbenchmark.MessageGenerator;
+import spsbenchmark.PrintBenchmarkUtils;
 import spsbenchmark.SPSBenchmark;
 
+import java.util.Arrays;
 import java.util.function.BiFunction;
 
 /**
@@ -44,15 +53,16 @@ public class BenchmarkRunner
     */
     private static BenchmarkConfig sharedConfig;
 
-    private static SPSBenchmark grothBM;
-
 
     // go, benchmarks, go!
     public static void main(String[] args)
     {
         prepareBenchmark();
 
-        runGroth1Benchmark();
+        //runGroth1Benchmark();
+        //runAGHO11Benchmark();
+        //runAKOT15Benchmark();
+        runKPW15Benchmark();
     }
 
     /**
@@ -80,12 +90,8 @@ public class BenchmarkRunner
     }
 
     /**
-     * runs a benchmark for the groth15 SPS scheme (signing G_1 elements)
-     *
-     * Note: the java compiler doesn't like the unchecked casting of the constructionDelegate to the required type.
-     *       The warning is disabled however, since this is the only context in which we use this function.
+     * runs a benchmark for the Groth15 SPS scheme (signing G_1 elements)
      */
-    @SuppressWarnings("unchecked")
     private static void runGroth1Benchmark() {
 
         PrintBenchmarkUtils.padString(String.format("Benchmark scheme %s", SPSGroth15SignatureScheme.class.getSimpleName()));
@@ -99,12 +105,99 @@ public class BenchmarkRunner
                 return new SPSGroth15SignatureScheme(params);
         };
 
-        //run groth benchmark in timing mode
-        grothBM = new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, group1MessageBlocks, constructionDelegate);
+        //run Groth1 benchmark in timing mode
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, group1MessageBlocks, constructionDelegate);
 
-        //run groth benchmark in counting mode
-        grothBM = new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, group1CountingMessageBlocks, constructionDelegate);
+        //run Groth1 benchmark in counting mode
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, group1CountingMessageBlocks, constructionDelegate);
     }
 
+
+    /**
+     * runs a benchmark for the AGHO11 SPS scheme (signing G_1 elements)
+     */
+    private static void runAGHO11Benchmark() {
+
+        PrintBenchmarkUtils.printSeparator();
+
+        //Note: for this scheme, we need to wrap the messages within a second messageBlock
+        MessageBlock[] wrappedMessages = Arrays.stream(group1MessageBlocks).map(
+                x -> new MessageBlock(x, new MessageBlock()))
+                .toArray(MessageBlock[]::new);
+
+        MessageBlock[] wrappedCountingMessages = Arrays.stream(group1CountingMessageBlocks).map(
+                        x -> new MessageBlock(x, new MessageBlock()))
+                .toArray(MessageBlock[]::new);
+
+
+        // defines a delegate function that constructs an instance of the scheme for us
+        BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> constructionDelegate
+                = (bGroup, messageLength) -> {
+            SPSAGHO11PublicParameters params = SPSAGHO11PublicParametersGen.generateParameters(
+                    bGroup, new Integer[] {messageLength, 0}
+            );
+            return new SPSAGHO11SignatureScheme(params);
+        };
+
+        //run AGHO benchmark in timing mode
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, wrappedMessages, constructionDelegate);
+
+        //run AGHO benchmark in counting mode
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, wrappedCountingMessages, constructionDelegate);
+    }
+
+
+    /**
+     * runs a benchmark for the AKOT15 SPS scheme (signing G_2 elements)
+     */
+    private static void runAKOT15Benchmark() {
+
+        PrintBenchmarkUtils.printSeparator();
+
+        // defines a delegate function that constructs an instance of the scheme for us
+        BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme>
+                constructionDelegate = (bGroup, messageLength) -> {
+            AKOT15SharedPublicParameters params
+                    = SPSPublicParametersGen.generateParameters(
+                    AKOT15SharedPublicParameters::new, bGroup, messageLength
+            );
+            return new SPSFSP2SignatureScheme(params);
+        };
+
+        //run AKOT15 benchmark in timing mode
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+                group2MessageBlocks, constructionDelegate);
+
+        //run AKOT15 benchmark in counting mode
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+                group2CountingMessageBlocks, constructionDelegate);
+    }
+
+    /**
+     * runs a benchmark for the KPW15 SPS scheme (signing G_1 elements)
+     */
+    private static void runKPW15Benchmark() {
+
+        PrintBenchmarkUtils.printSeparator();
+
+        // defines a delegate function that constructs an instance of the scheme for us
+        BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme>
+                constructionDelegate = (bGroup, messageLength) -> {
+            SPSKPW15PublicParameters params
+                    = SPSPublicParametersGen.generateParameters(
+                    SPSKPW15PublicParameters::new, bGroup, messageLength
+            );
+            return new SPSKPW15SignatureScheme(params);
+        };
+
+        //run KPW15 benchmark in timing mode
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+                group1MessageBlocks, constructionDelegate);
+
+        //run KPW15 benchmark in counting mode
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+                group1CountingMessageBlocks, constructionDelegate);
+    }
+    
 
 }

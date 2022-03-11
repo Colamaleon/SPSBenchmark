@@ -81,6 +81,9 @@ public class SPSBenchmark {
 
         // run the appropriate benchmark
         autoRunBenchmark(mode);
+
+        //TODO flush to txt file here
+
     }
 
 
