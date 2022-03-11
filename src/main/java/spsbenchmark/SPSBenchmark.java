@@ -16,7 +16,7 @@ import java.util.function.IntConsumer;
  */
 public class SPSBenchmark {
 
-    public enum BenchmarkMode {Time,Counting};
+    public enum BenchmarkMode {Timing,Counting};
 
     // these are given on start up
 
@@ -79,11 +79,14 @@ public class SPSBenchmark {
         this.bmKeyPairs = new SignatureKeyPair[config.getRunIterations()];
         this.bmSignatures = new Signature[config.getRunIterations()];
 
+        // Prepare file logger
+        BenchmarkLogger.clear();
+
         // run the appropriate benchmark
         autoRunBenchmark(mode);
 
-        //TODO flush to txt file here
-
+        // Flush BenchmarkLogger to BenchmarkFile
+        PrintBenchmarkUtils.flushLoggerToBenchmarkFile(schemeBlueprint.getClass().getSimpleName(), mode);
     }
 
 
@@ -202,6 +205,13 @@ public class SPSBenchmark {
 
             PrintBenchmarkUtils.printSeparator();
             PrintBenchmarkUtils.printSeparator();
+
+            // log results to file
+            BenchmarkLogger.logln(PrintBenchmarkUtils.padString(
+                    String.format("%s [%s] benchmark:",
+                            bmName,
+                            schemeBlueprint.getClass().getSimpleName())));
+            BenchmarkLogger.logln(results.getPrettyString());
         }
     }
 
@@ -291,6 +301,14 @@ public class SPSBenchmark {
                             schemeBlueprint.getClass().getSimpleName())));
 
             System.out.println(config.getCountingBGroup().formatCounterDataAllBuckets());
+
+            // log results to file
+            BenchmarkLogger.logln(PrintBenchmarkUtils.padString(
+                    String.format("[DONE][COUNT] %s [%s] benchmark...",
+                            bmName,
+                            schemeBlueprint.getClass().getSimpleName())));
+
+            BenchmarkLogger.logln(config.getCountingBGroup().formatCounterDataAllBuckets());
         }
     }
 

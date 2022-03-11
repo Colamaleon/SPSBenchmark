@@ -19,6 +19,7 @@ import spsbenchmark.MessageGenerator;
 import spsbenchmark.PrintBenchmarkUtils;
 import spsbenchmark.SPSBenchmark;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.function.BiFunction;
 
@@ -28,8 +29,8 @@ import java.util.function.BiFunction;
 public class BenchmarkRunner
 {
 
-    private static final int PREWARM_ITERATIONS = 20;
-    private static final int BM_ITERATIONS = 100;
+    private static final int PREWARM_ITERATIONS = 1;
+    private static final int BM_ITERATIONS = 1;
     private static final int MESSAGE_LENGTH = 32;
 
     // the bilinear group to use
@@ -59,9 +60,9 @@ public class BenchmarkRunner
     {
         prepareBenchmark();
 
-        //runGroth1Benchmark();
-        //runAGHO11Benchmark();
-        //runAKOT15Benchmark();
+        runGroth1Benchmark();
+        runAGHO11Benchmark();
+        runAKOT15Benchmark();
         runKPW15Benchmark();
     }
 
@@ -106,7 +107,7 @@ public class BenchmarkRunner
         };
 
         //run Groth1 benchmark in timing mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, group1MessageBlocks, constructionDelegate);
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Timing, group1MessageBlocks, constructionDelegate);
 
         //run Groth1 benchmark in counting mode
         new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, group1CountingMessageBlocks, constructionDelegate);
@@ -140,7 +141,7 @@ public class BenchmarkRunner
         };
 
         //run AGHO benchmark in timing mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, wrappedMessages, constructionDelegate);
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Timing, wrappedMessages, constructionDelegate);
 
         //run AGHO benchmark in counting mode
         new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, wrappedCountingMessages, constructionDelegate);
@@ -165,7 +166,7 @@ public class BenchmarkRunner
         };
 
         //run AKOT15 benchmark in timing mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Timing,
                 group2MessageBlocks, constructionDelegate);
 
         //run AKOT15 benchmark in counting mode
@@ -191,7 +192,7 @@ public class BenchmarkRunner
         };
 
         //run KPW15 benchmark in timing mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Timing,
                 group1MessageBlocks, constructionDelegate);
 
         //run KPW15 benchmark in counting mode
