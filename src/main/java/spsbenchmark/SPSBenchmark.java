@@ -141,7 +141,7 @@ public class SPSBenchmark {
      * {@param iterationNumber} determines where to store the generated key.
      */
     private void runKeyGen(int iterationNumber) {
-        SignatureKeyPair keyPair = bmSchemeInstances[iterationNumber].generateKeyPair(config.getMessageLength());
+        SignatureKeyPair keyPair = bmSchemeInstances[0].generateKeyPair(config.getMessageLength());
         bmKeyPairs[iterationNumber] = keyPair;
     }
 
@@ -151,7 +151,7 @@ public class SPSBenchmark {
      */
     private void runSign(int iterationNumber) {
         // [!] signs using different scheme instances, but with same signing key for all messages
-        Signature sigma = bmSchemeInstances[iterationNumber]
+        Signature sigma = bmSchemeInstances[0]
                 .sign(bmKeyPairs[0].getSigningKey(), messages[iterationNumber]);
         bmSignatures[iterationNumber] = sigma;
     }
@@ -163,7 +163,7 @@ public class SPSBenchmark {
     private void runVerify(int iterationNumber) {
 
         // [!] verifies using different scheme instances, but with same verification key for all messages
-        bmSchemeInstances[iterationNumber].verify(messages[iterationNumber],
+        bmSchemeInstances[0].verify(messages[iterationNumber],
                 bmSignatures[iterationNumber],
                 bmKeyPairs[0].getVerificationKey());
     }
