@@ -14,7 +14,7 @@ import java.util.function.IntConsumer;
  * or
  * Run the scheme a single time, counting the group operations required in each step
  */
-public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSignatureScheme> {
+public class SPSBenchmark {
 
     public enum BenchmarkMode {Time,Counting};
 
@@ -89,6 +89,7 @@ public class SPSBenchmark<SchemeType extends MultiMessageStructurePreservingSign
      * the specified number of times (see {@code config.runIterations}) for timing and once for counting -
      * tracking the appropriate statistic
      */
+    @SuppressWarnings("unchecked")
     private void autoRunBenchmark(BenchmarkMode mode) {
 
         //pick either the timing or counting benchmark function
