@@ -16,7 +16,7 @@ import java.util.function.IntConsumer;
  */
 public class SPSBenchmark {
 
-    public enum BenchmarkMode {Time,Counting};
+    public enum BenchmarkMode {Time,Counting}
 
     // these are given on start up
 
@@ -24,6 +24,8 @@ public class SPSBenchmark {
      * defines the shared parameters of the benchmark
      */
     private final BenchmarkConfig config;
+
+    private final BenchmarkMode mode;
 
     /**
      * points to a function that constructs a new instance of the scheme
@@ -46,9 +48,11 @@ public class SPSBenchmark {
 
     // these are calculated during the benchmark
 
-    private SignatureKeyPair[] bmKeyPairs;
+    private final MultiMessageStructurePreservingSignatureScheme[] bmSchemeInstances;
 
-    private Signature[] bmSignatures;
+    private final SignatureKeyPair[] bmKeyPairs;
+
+    private final Signature[] bmSignatures;
 
 
     /**
@@ -65,6 +69,7 @@ public class SPSBenchmark {
 
         this.config = config;
         this.messages = messages;
+        this.mode = mode;
 
         //set up function to generate new scheme instances
         this.schemeSetupFunction = schemeSetupFunction;
@@ -78,12 +83,12 @@ public class SPSBenchmark {
         //set up arrays for storage
         this.bmKeyPairs = new SignatureKeyPair[config.getRunIterations()];
         this.bmSignatures = new Signature[config.getRunIterations()];
+        this.bmSchemeInstances = new MultiMessageStructurePreservingSignatureScheme[config.getRunIterations()];
 
         // run the appropriate benchmark
-        autoRunBenchmark(mode);
+        autoRunBenchmark();
 
         //TODO flush to txt file here
-
     }
 
 
@@ -93,7 +98,7 @@ public class SPSBenchmark {
      * tracking the appropriate statistic
      */
     @SuppressWarnings("unchecked")
-    private void autoRunBenchmark(BenchmarkMode mode) {
+    private void autoRunBenchmark() {
 
         //pick either the timing or counting benchmark function
         BiConsumer<String,IntConsumer> benchmarkFunc = (mode == BenchmarkMode.Counting) ?
@@ -124,8 +129,11 @@ public class SPSBenchmark {
      * Uses the provided bilinear group and the provided construction delegate to do so.
      */
     private void runSetup(int iterationNumber) {
+        BilinearGroup targetGroup = (mode == BenchmarkMode.Counting) ? config.getCountingBGroup() : config.getTimerBGroup();
+
         MultiMessageStructurePreservingSignatureScheme tempSchemeInstance
-                = schemeSetupFunction.apply(config.getTimerBGroup(), config.getMessageLength());
+                = schemeSetupFunction.apply(targetGroup, config.getMessageLength());
+        bmSchemeInstances[iterationNumber] = tempSchemeInstance;
     }
 
     /**
@@ -133,7 +141,7 @@ public class SPSBenchmark {
      * {@param iterationNumber} determines where to store the generated key.
      */
     private void runKeyGen(int iterationNumber) {
-        SignatureKeyPair keyPair = schemeBlueprint.generateKeyPair(config.getMessageLength());
+        SignatureKeyPair keyPair = bmSchemeInstances[iterationNumber].generateKeyPair(config.getMessageLength());
         bmKeyPairs[iterationNumber] = keyPair;
     }
 
@@ -142,7 +150,9 @@ public class SPSBenchmark {
      * {@param iterationNumber} determines where to store the generated key.
      */
     private void runSign(int iterationNumber) {
-        Signature sigma = schemeBlueprint.sign(bmKeyPairs[iterationNumber].getSigningKey(), messages[iterationNumber]);
+        // [!] signs using different scheme instances, but with same signing key for all messages
+        Signature sigma = bmSchemeInstances[iterationNumber]
+                .sign(bmKeyPairs[0].getSigningKey(), messages[iterationNumber]);
         bmSignatures[iterationNumber] = sigma;
     }
 
@@ -152,10 +162,10 @@ public class SPSBenchmark {
      */
     private void runVerify(int iterationNumber) {
 
-        // verify the signature
-        schemeBlueprint.verify(messages[iterationNumber],
+        // [!] verifies using different scheme instances, but with same verification key for all messages
+        bmSchemeInstances[iterationNumber].verify(messages[iterationNumber],
                 bmSignatures[iterationNumber],
-                bmKeyPairs[iterationNumber].getVerificationKey());
+                bmKeyPairs[0].getVerificationKey());
     }
 
 
@@ -182,7 +192,7 @@ public class SPSBenchmark {
                 targetFunction.accept(i);
             }
             System.out.println(PrintBenchmarkUtils.padString(
-                    String.format("[DONE][TIME] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
+                    String.format("[DONE][TIME] (pre-warm) %s [%s] benchmark...",
                             bmName,
                             schemeBlueprint.getClass().getSimpleName())));
             System.out.println(PrintBenchmarkUtils.padString(""));
@@ -195,7 +205,7 @@ public class SPSBenchmark {
             System.out.println(PrintBenchmarkUtils.padString(""));
 
             System.out.println(PrintBenchmarkUtils.padString(
-                    String.format("[DONE][TIME] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
+                    String.format("[DONE][TIME] %s [%s] benchmark...",
                             bmName,
                             schemeBlueprint.getClass().getSimpleName())));
             System.out.println(results.getPrettyString());
@@ -286,7 +296,7 @@ public class SPSBenchmark {
 
             // print results
             System.out.println(PrintBenchmarkUtils.padString(
-                    String.format("[DONE][COUNT] %s %s [%s] benchmark...", (isPrewarm) ? "(pre-warm)" : "",
+                    String.format("[DONE][COUNT] %s [%s] benchmark...",
                             bmName,
                             schemeBlueprint.getClass().getSimpleName())));
 
