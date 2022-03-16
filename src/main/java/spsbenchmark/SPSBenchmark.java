@@ -7,6 +7,7 @@ import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.IntConsumer;
 
 /**
@@ -36,6 +37,14 @@ public class SPSBenchmark {
     private final BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction;
 
     /**
+     * points to a function that constructs a new instance of the scheme
+     * using a {@code Representation}
+     * Needed for counting buckets in setup to actually compute
+     */
+    private final Function<Representation,MultiMessageStructurePreservingSignatureScheme> schemeReprRestoreFunction;
+
+
+    /**
      * the instance of the signature scheme used for benchmarks
      */
     private final MultiMessageStructurePreservingSignatureScheme schemeBlueprint;
@@ -63,7 +72,8 @@ public class SPSBenchmark {
     public SPSBenchmark(BenchmarkConfig config,
                         BenchmarkMode mode,
                         MessageBlock[] messages,
-                        BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction) {
+                        BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction,
+                        Function<Representation,MultiMessageStructurePreservingSignatureScheme> schemeReprRestoreFunction) {
 
         // print the config
         PrintBenchmarkUtils.prettyPrintConfig(config, mode);
@@ -74,6 +84,7 @@ public class SPSBenchmark {
 
         //set up function to generate new scheme instances
         this.schemeSetupFunction = schemeSetupFunction;
+        this.schemeReprRestoreFunction = schemeReprRestoreFunction;
 
         // pick the appropriate bilinear group based on the current mode
         BilinearGroup bGroup = (mode == BenchmarkMode.Counting) ? config.getCountingBGroup() : config.getTimerBGroup();
@@ -105,6 +116,11 @@ public class SPSBenchmark {
         BiConsumer<String,IntConsumer> benchmarkFunc = (mode == BenchmarkMode.Counting) ?
                 this::runCountingBenchmark : this::runTimeBenchmark ;
 
+        if(mode == BenchmarkMode.Counting) {
+            //reset the group op buckets before counting
+            config.getCountingBGroup().resetCountersAllBuckets();
+        }
+
         // setup
         benchmarkFunc.accept("setup", this::runSetup);
 
@@ -123,7 +139,7 @@ public class SPSBenchmark {
                     String.format("[DONE][COUNT] [%s] benchmarks...",
                             schemeBlueprint.getClass().getSimpleName())));
 
-            System.out.println(config.getCountingBGroup().formatCounterDataAllBuckets());
+            System.out.println(config.getCountingBGroup().formatCounterDataAllBuckets(false));
         }
     }
 
@@ -144,6 +160,12 @@ public class SPSBenchmark {
                 = schemeSetupFunction.apply(targetGroup, config.getMessageLength());
 
         bmSchemeInstances[iterationNumber] = tempSchemeInstance;
+
+        if(mode == BenchmarkMode.Counting) {
+            //force pp calculation
+            Representation repr = tempSchemeInstance.getRepresentation();
+            bmSchemeInstances[iterationNumber] = schemeReprRestoreFunction.apply(repr);
+        }
     }
 
     /**
@@ -203,6 +225,7 @@ public class SPSBenchmark {
         bmSchemeInstances[0].verify(messages[iterationNumber],
                 bmSignatures[iterationNumber],
                 bmKeyPairs[0].getVerificationKey());
+
     }
 
 
@@ -319,23 +342,18 @@ public class SPSBenchmark {
                         schemeBlueprint.getClass().getSimpleName())));
 
         if(isPrewarm) {
-            for (int i = 0; i < config.getPrewarmIterations(); i++) {
-                //run the function for pre-warming
-                targetFunction.accept(i);
-            }
+            //no pre-warming!
         }
         else {
-
             //run the function, this time counting the group operations.
             // Only needs to run on once
             config.getCountingBGroup().setBucket(bmName);
-            config.getCountingBGroup().resetCounters();
+            config.getCountingBGroup().resetCounters(bmName);
             targetFunction.accept(0);
         }
     }
 
     private void runCountingBenchmark(String bmName, IntConsumer targetFunction) {
-        runCountingBenchmark(bmName,targetFunction,true);
         runCountingBenchmark(bmName,targetFunction,false);
     }
 
