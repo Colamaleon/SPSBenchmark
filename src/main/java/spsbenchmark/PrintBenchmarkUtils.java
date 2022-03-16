@@ -1,5 +1,8 @@
 package spsbenchmark;
 
+import java.io.*;
+import java.nio.file.Files;
+
 /**
  * A collection of utilities for running banchmarks
  *
@@ -7,6 +10,8 @@ package spsbenchmark;
 public class PrintBenchmarkUtils {
 
     public static final int CONSOLE_WIDTH = 120;
+
+    public static final String OUTPUT_PATH = "output";
 
     /**
      * pads a string to length (pad right)
@@ -59,4 +64,24 @@ public class PrintBenchmarkUtils {
 
     }
 
+
+    private static String GetBenchmarkDirectoryPath() {
+        return new File("./" + OUTPUT_PATH).getAbsolutePath();
+    }
+
+    public static void flushLoggerToBenchmarkFile(String schemeName, SPSBenchmark.BenchmarkMode benchmarkMode) {
+        try {
+            String dir = GetBenchmarkDirectoryPath();
+            new File(dir).mkdirs();
+
+            String filename = String.format("%s\\%s_%s.txt", dir, schemeName, benchmarkMode);
+
+            BenchmarkLogger.flushLogToFile(filename);
+            System.out.println(String.format("BenchmarkFile for [%s] using %s created under: %s",
+                    schemeName, benchmarkMode, filename));
+        } catch (Exception e) {
+            System.out.println(String.format("BenchmarkFile for [%s] using %s could not be created!",
+                    schemeName, benchmarkMode));
+        }
+    }
 }
