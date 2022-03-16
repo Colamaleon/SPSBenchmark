@@ -28,7 +28,7 @@ import java.util.function.BiFunction;
 public class BenchmarkRunner
 {
 
-    private static final int PREWARM_ITERATIONS = 20;
+    private static final int PREWARM_ITERATIONS = 100;
     private static final int BM_ITERATIONS = 100;
     private static final int MESSAGE_LENGTH = 32;
 
@@ -59,9 +59,9 @@ public class BenchmarkRunner
     {
         prepareBenchmark();
 
-        runGroth1Benchmark();
-        runAGHO11Benchmark();
-        runAKOT15Benchmark();
+        //runGroth1Benchmark();
+        //runAGHO11Benchmark();
+        //runAKOT15Benchmark();
         runKPW15Benchmark();
     }
 
@@ -106,10 +106,10 @@ public class BenchmarkRunner
         };
 
         //run Groth1 benchmark in timing mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, group1MessageBlocks, constructionDelegate, SPSGroth15SignatureScheme::new);
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, group1MessageBlocks, constructionDelegate);
 
         //run Groth1 benchmark in counting mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, group1CountingMessageBlocks, constructionDelegate, SPSGroth15SignatureScheme::new);
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, group1CountingMessageBlocks, constructionDelegate);
     }
 
 
@@ -140,10 +140,10 @@ public class BenchmarkRunner
         };
 
         //run AGHO benchmark in timing mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, wrappedMessages, constructionDelegate, SPSAGHO11SignatureScheme::new);
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, wrappedMessages, constructionDelegate);
 
         //run AGHO benchmark in counting mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, wrappedCountingMessages, constructionDelegate, SPSAGHO11SignatureScheme::new);
+        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, wrappedCountingMessages, constructionDelegate);
     }
 
 
@@ -166,11 +166,11 @@ public class BenchmarkRunner
 
         //run AKOT15 benchmark in timing mode
         new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
-                group2MessageBlocks, constructionDelegate, SPSFSP2SignatureScheme::new);
+                group2MessageBlocks, constructionDelegate);
 
         //run AKOT15 benchmark in counting mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
-                group2CountingMessageBlocks, constructionDelegate, SPSFSP2SignatureScheme::new);
+        //new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+        //        group2CountingMessageBlocks, constructionDelegate);
     }
 
     /**
@@ -192,11 +192,11 @@ public class BenchmarkRunner
 
         //run KPW15 benchmark in timing mode
         new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
-                group1MessageBlocks, constructionDelegate, SPSKPW15SignatureScheme::new);
+                group1MessageBlocks, constructionDelegate);
 
         //run KPW15 benchmark in counting mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
-                group1CountingMessageBlocks, constructionDelegate, SPSKPW15SignatureScheme::new);
+        //new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+        //        group1CountingMessageBlocks, constructionDelegate);
     }
     
 

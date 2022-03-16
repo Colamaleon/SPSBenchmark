@@ -2,9 +2,11 @@ package spsbenchmark;
 
 import org.cryptimeleon.craco.common.plaintexts.MessageBlock;
 import org.cryptimeleon.craco.sig.*;
+import org.cryptimeleon.math.serialization.ListRepresentation;
 import org.cryptimeleon.math.serialization.Representation;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -36,13 +38,6 @@ public class SPSBenchmark {
      */
     private final BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction;
 
-    /**
-     * points to a function that constructs a new instance of the scheme
-     * using a {@code Representation}
-     * Needed for counting buckets in setup to actually compute
-     */
-    private final Function<Representation,MultiMessageStructurePreservingSignatureScheme> schemeReprRestoreFunction;
-
 
     /**
      * the instance of the signature scheme used for benchmarks
@@ -72,8 +67,7 @@ public class SPSBenchmark {
     public SPSBenchmark(BenchmarkConfig config,
                         BenchmarkMode mode,
                         MessageBlock[] messages,
-                        BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction,
-                        Function<Representation,MultiMessageStructurePreservingSignatureScheme> schemeReprRestoreFunction) {
+                        BiFunction<BilinearGroup,Integer,MultiMessageStructurePreservingSignatureScheme> schemeSetupFunction) {
 
         // print the config
         PrintBenchmarkUtils.prettyPrintConfig(config, mode);
@@ -84,7 +78,6 @@ public class SPSBenchmark {
 
         //set up function to generate new scheme instances
         this.schemeSetupFunction = schemeSetupFunction;
-        this.schemeReprRestoreFunction = schemeReprRestoreFunction;
 
         // pick the appropriate bilinear group based on the current mode
         BilinearGroup bGroup = (mode == BenchmarkMode.Counting) ? config.getCountingBGroup() : config.getTimerBGroup();
@@ -153,66 +146,46 @@ public class SPSBenchmark {
      * initializes the scheme a single time.
      * Uses the provided bilinear group and the provided construction delegate to do so.
      */
-    private void runSetup(int iterationNumber) {
+    private Representation runSetup(int iterationNumber) {
         BilinearGroup targetGroup = (mode == BenchmarkMode.Counting) ? config.getCountingBGroup() : config.getTimerBGroup();
 
         MultiMessageStructurePreservingSignatureScheme tempSchemeInstance
                 = schemeSetupFunction.apply(targetGroup, config.getMessageLength());
 
+        Representation repr = tempSchemeInstance.getRepresentation();
         bmSchemeInstances[iterationNumber] = tempSchemeInstance;
 
-        if(mode == BenchmarkMode.Counting) {
-            //force pp calculation
-            Representation repr = tempSchemeInstance.getRepresentation();
-            bmSchemeInstances[iterationNumber] = schemeReprRestoreFunction.apply(repr);
-        }
+        return repr;
     }
 
     /**
      * generates a keyPair using the blueprint instance and stores it for later use
      * {@param iterationNumber} determines where to store the generated key.
      */
-    private void runKeyGen(int iterationNumber) {
+    private Representation runKeyGen(int iterationNumber) {
         SignatureKeyPair keyPair = bmSchemeInstances[0].generateKeyPair(config.getMessageLength());
 
-        if(mode == BenchmarkMode.Time) {
-            bmKeyPairs[iterationNumber] = keyPair;
-        }
-        else if(mode == BenchmarkMode.Counting) {
-            //if we're running in counting mode, force serialization/deserialization once
-            Representation skRepr = keyPair.getSigningKey().getRepresentation();
-            Representation vkRepr = keyPair.getVerificationKey().getRepresentation();
-            bmKeyPairs[iterationNumber] = new SignatureKeyPair(
-                    bmSchemeInstances[iterationNumber].restoreVerificationKey(vkRepr),
-                    bmSchemeInstances[iterationNumber].restoreSigningKey(skRepr));
-        }
-        else {
-            // only support counting or timer mode
-            throw new IllegalArgumentException("SPSBenchmark may only run in Time or Counting mode");
-        }
+        Representation skRepr = keyPair.getSigningKey().getRepresentation();
+        Representation vkRepr = keyPair.getVerificationKey().getRepresentation();
+
+        bmKeyPairs[iterationNumber] = keyPair;
+
+        return new ListRepresentation(skRepr, vkRepr);
     }
 
     /**
      * signs the {@param iterationNumber}s MessageBlock and stores the resulting signature for later use
      * {@param iterationNumber} determines where to store the generated key.
      */
-    private void runSign(int iterationNumber) {
+    private Representation runSign(int iterationNumber) {
         // [!] signs using different scheme instances, but with same signing key for all messages
         Signature sigma = bmSchemeInstances[0]
                 .sign(bmKeyPairs[0].getSigningKey(), messages[iterationNumber]);
 
-        if(mode == BenchmarkMode.Time) {
-            bmSignatures[iterationNumber] = sigma;
-        }
-        else if(mode == BenchmarkMode.Counting) {
-            //if we're running in counting mode, force serialization/deserialization once
-            Representation repr = sigma.getRepresentation();
-            bmSignatures[iterationNumber] = bmSchemeInstances[iterationNumber].restoreSignature(repr);
-        }
-        else {
-            // only support counting or timer mode
-            throw new IllegalArgumentException("SPSBenchmark may only run in Time or Counting mode");
-        }
+        Representation repr = sigma.getRepresentation();
+        bmSignatures[iterationNumber] = sigma;
+
+        return repr;
     }
 
     /**
@@ -299,11 +272,13 @@ public class SPSBenchmark {
         double finishTime = -1;
 
         for (int i = 0; i < config.getRunIterations(); i++) {
+
             //begin counting here
             refTime = System.nanoTime();
 
             // run method to benchmark
             targetMethod.accept(i);
+            // get representation
 
             //check time
             finishTime = System.nanoTime();

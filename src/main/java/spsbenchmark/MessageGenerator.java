@@ -19,7 +19,7 @@ public class MessageGenerator {
         // generate blocks
         for (int i = 0; i < blockCount; i++) {
             messages[i] = new MessageBlock(IntStream.range(0, messageLength).mapToObj(
-                    x -> new GroupElementPlainText(targetGroup.getUniformlyRandomElement().precomputePow())
+                    x -> new GroupElementPlainText(targetGroup.getUniformlyRandomElement()) // <-- TODO precompute here?
                 ).toArray(GroupElementPlainText[]::new)
             );
         }
