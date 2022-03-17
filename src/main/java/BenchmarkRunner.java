@@ -19,6 +19,8 @@ import spsbenchmark.MessageGenerator;
 import spsbenchmark.PrintBenchmarkUtils;
 import spsbenchmark.SPSBenchmark;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.function.BiFunction;
 
@@ -28,9 +30,9 @@ import java.util.function.BiFunction;
 public class BenchmarkRunner
 {
 
-    private static final int PREWARM_ITERATIONS = 100;
-    private static final int BM_ITERATIONS = 100;
-    private static final int MESSAGE_LENGTH = 32;
+    private static int PREWARM_ITERATIONS;
+    private static int BM_ITERATIONS;
+    private static int MESSAGE_LENGTH;
 
     // the bilinear group to use
     private static final MclBilinearGroup.GroupChoice GROUP_CHOICE = MclBilinearGroup.GroupChoice.BN254;
@@ -55,14 +57,30 @@ public class BenchmarkRunner
 
 
     // go, benchmarks, go!
-    public static void main(String[] args)
-    {
+    /**
+     * Runs a benchmark with the selected parameters
+     * Usage: main (t|c) NameOfScheme messageLength prewarmIterations iterations
+     */
+    public static void main(String[] args) {
+        // parse message length, pre-warm iterations and iterations from args
+
+        MESSAGE_LENGTH      = Integer.parseInt(args[2]);
+        PREWARM_ITERATIONS  = Integer.parseInt(args[3]);
+        BM_ITERATIONS       = Integer.parseInt(args[4]);
+
         prepareBenchmark();
 
-        //runGroth1Benchmark();
-        //runAGHO11Benchmark();
-        //runAKOT15Benchmark();
-        runKPW15Benchmark();
+        //find appropriate benchmark to run via reflections
+        SPSBenchmark.BenchmarkMode mode = (args[0].equals("t")) ? SPSBenchmark.BenchmarkMode.Time : SPSBenchmark.BenchmarkMode.Counting;
+        String benchmarkMethodName = "run" + args[1] + "Benchmark";
+
+        try{
+            Method benchmarkMethod = BenchmarkRunner.class.getMethod(benchmarkMethodName, SPSBenchmark.BenchmarkMode.class);
+            benchmarkMethod.invoke(BenchmarkRunner.class, mode);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -92,9 +110,10 @@ public class BenchmarkRunner
     /**
      * runs a benchmark for the Groth15 SPS scheme (signing G_1 elements)
      */
-    private static void runGroth1Benchmark() {
+    public static void runGroth1Benchmark(SPSBenchmark.BenchmarkMode mode) {
 
-        PrintBenchmarkUtils.padString(String.format("Benchmark scheme %s", SPSGroth15SignatureScheme.class.getSimpleName()));
+        PrintBenchmarkUtils.padString(
+                String.format("Benchmark scheme %s", SPSGroth15SignatureScheme.class.getSimpleName()));
         PrintBenchmarkUtils.printSeparator();
 
         // defines a delegate function that constructs an instance of the scheme for us
@@ -105,19 +124,26 @@ public class BenchmarkRunner
                 return new SPSGroth15SignatureScheme(params);
         };
 
-        //run Groth1 benchmark in timing mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, group1MessageBlocks, constructionDelegate);
-
-        //run Groth1 benchmark in counting mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, group1CountingMessageBlocks, constructionDelegate);
+        if(mode == SPSBenchmark.BenchmarkMode.Time) {
+            //run Groth1 benchmark in timing mode
+            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+                    group1MessageBlocks, constructionDelegate);
+        }
+        else {
+            //run Groth1 benchmark in counting mode
+            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+                    group1CountingMessageBlocks, constructionDelegate);
+        }
     }
 
 
     /**
      * runs a benchmark for the AGHO11 SPS scheme (signing G_1 elements)
      */
-    private static void runAGHO11Benchmark() {
+    public static void runAGHO11Benchmark(SPSBenchmark.BenchmarkMode mode) {
 
+        PrintBenchmarkUtils.padString(
+                String.format("Benchmark scheme %s", SPSAGHO11SignatureScheme.class.getSimpleName()));
         PrintBenchmarkUtils.printSeparator();
 
         //Note: for this scheme, we need to wrap the messages within a second messageBlock
@@ -139,19 +165,26 @@ public class BenchmarkRunner
             return new SPSAGHO11SignatureScheme(params);
         };
 
-        //run AGHO benchmark in timing mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time, wrappedMessages, constructionDelegate);
-
-        //run AGHO benchmark in counting mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting, wrappedCountingMessages, constructionDelegate);
+        if(mode == SPSBenchmark.BenchmarkMode.Time) {
+            //run AGHO benchmark in timing mode
+            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+                    wrappedMessages, constructionDelegate);
+        }
+        else {
+            //run AGHO benchmark in counting mode
+            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+                    wrappedCountingMessages, constructionDelegate);
+        }
     }
 
 
     /**
      * runs a benchmark for the AKOT15 SPS scheme (signing G_2 elements)
      */
-    private static void runAKOT15Benchmark() {
+    public static void runAKOT15Benchmark(SPSBenchmark.BenchmarkMode mode) {
 
+        PrintBenchmarkUtils.padString(
+                String.format("Benchmark scheme %s", SPSFSP2SignatureScheme.class.getSimpleName()));
         PrintBenchmarkUtils.printSeparator();
 
         // defines a delegate function that constructs an instance of the scheme for us
@@ -164,20 +197,25 @@ public class BenchmarkRunner
             return new SPSFSP2SignatureScheme(params);
         };
 
-        //run AKOT15 benchmark in timing mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
-                group2MessageBlocks, constructionDelegate);
-
-        //run AKOT15 benchmark in counting mode
-        //new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
-        //        group2CountingMessageBlocks, constructionDelegate);
+        if(mode == SPSBenchmark.BenchmarkMode.Time) {
+            //run AKOT15 benchmark in timing mode
+            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+                    group2MessageBlocks, constructionDelegate);
+        }
+        else {
+            //run AKOT15 benchmark in counting mode
+            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+                    group2CountingMessageBlocks, constructionDelegate);
+        }
     }
 
     /**
      * runs a benchmark for the KPW15 SPS scheme (signing G_1 elements)
      */
-    private static void runKPW15Benchmark() {
+    public static void runKPW15Benchmark(SPSBenchmark.BenchmarkMode mode) {
 
+        PrintBenchmarkUtils.padString(
+                String.format("Benchmark scheme %s", SPSKPW15SignatureScheme.class.getSimpleName()));
         PrintBenchmarkUtils.printSeparator();
 
         // defines a delegate function that constructs an instance of the scheme for us
@@ -190,13 +228,16 @@ public class BenchmarkRunner
             return new SPSKPW15SignatureScheme(params);
         };
 
-        //run KPW15 benchmark in timing mode
-        new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
-                group1MessageBlocks, constructionDelegate);
-
-        //run KPW15 benchmark in counting mode
-        //new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
-        //        group1CountingMessageBlocks, constructionDelegate);
+        if(mode == SPSBenchmark.BenchmarkMode.Time) {
+            //run KPW15 benchmark in timing mode
+            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+                    group1MessageBlocks, constructionDelegate);
+        }
+        else {
+            //run KPW15 benchmark in counting mode
+            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+                    group1CountingMessageBlocks, constructionDelegate);
+        }
     }
     
 
