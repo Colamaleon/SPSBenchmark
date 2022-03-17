@@ -23,4 +23,6 @@ public final class BenchmarkLogger {
         writer.write(history);
         writer.close();
     }
+
+
 }

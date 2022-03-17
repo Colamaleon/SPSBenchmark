@@ -6,6 +6,7 @@ import org.cryptimeleon.math.serialization.ListRepresentation;
 import org.cryptimeleon.math.serialization.Representation;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 
+import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -30,6 +31,13 @@ public class SPSBenchmark {
     private final BenchmarkConfig config;
 
     private final BenchmarkMode mode;
+
+    /**
+     * Stores the result of the benchmark times for each step
+     */
+    private HashMap<String,BenchmarkTimes> benchmarkTimeResults;
+
+
 
     /**
      * points to a function that constructs a new instance of the scheme
@@ -89,6 +97,8 @@ public class SPSBenchmark {
         this.bmKeyPairs = new SignatureKeyPair[config.getRunIterations()];
         this.bmSignatures = new Signature[config.getRunIterations()];
         this.bmSchemeInstances = new MultiMessageStructurePreservingSignatureScheme[config.getRunIterations()];
+
+        this.benchmarkTimeResults = new HashMap<>();
 
         // run the appropriate benchmark
         autoRunBenchmark();
@@ -177,6 +187,7 @@ public class SPSBenchmark {
      * signs the {@param iterationNumber}s MessageBlock and stores the resulting signature for later use
      * {@param iterationNumber} determines where to store the generated key.
      */
+    @SuppressWarnings("unchecked")
     private Representation runSign(int iterationNumber) {
         // [!] signs using different scheme instances, but with same signing key for all messages
         Signature sigma = bmSchemeInstances[0]
@@ -233,6 +244,8 @@ public class SPSBenchmark {
             // run and measure times
             BenchmarkTimes results = measureStepTimes(targetFunction);
 
+            //store results for later
+            this.benchmarkTimeResults.put(bmName, results);
 
             // print results
             System.out.println(PrintBenchmarkUtils.padString(""));
@@ -332,5 +345,9 @@ public class SPSBenchmark {
         runCountingBenchmark(bmName,targetFunction,false);
     }
 
+
+    public HashMap<String, BenchmarkTimes> getBenchmarkTimeResults() {
+        return benchmarkTimeResults;
+    }
 
 }
