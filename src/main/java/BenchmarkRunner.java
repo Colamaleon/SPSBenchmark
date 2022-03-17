@@ -66,7 +66,7 @@ public class BenchmarkRunner
         PREWARM_ITERATIONS  = Integer.parseInt(args[3]);
         BM_ITERATIONS       = Integer.parseInt(args[4]);
 
-        prepareBenchmark();
+        prepareBenchmark(args[1]);
 
         //find appropriate benchmark to run via reflections
         BenchmarkMode mode = (args[0].equals("t")) ? BenchmarkMode.Time : BenchmarkMode.Counting;
@@ -84,12 +84,12 @@ public class BenchmarkRunner
     /**
      * prepares benchmarks by generating messages and initializing the first scheme instances
      */
-    private static void prepareBenchmark() {
+    private static void prepareBenchmark(String schemeName) {
 
         sharedTimerBGroup = new MclBilinearGroup(GROUP_CHOICE);
         sharedCountingBGroup = new DebugBilinearGroup(sharedTimerBGroup.size(), BilinearGroup.Type.TYPE_3);
 
-        sharedConfig = new BenchmarkConfig(sharedTimerBGroup, sharedCountingBGroup,
+        sharedConfig = new BenchmarkConfig(schemeName, sharedTimerBGroup, sharedCountingBGroup,
                 PREWARM_ITERATIONS, BM_ITERATIONS, MESSAGE_LENGTH);
 
         // prepare message sets for both groups of {@code sharedBGroup}.

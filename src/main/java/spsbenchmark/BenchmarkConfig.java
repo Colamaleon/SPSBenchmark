@@ -11,6 +11,11 @@ import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 public class BenchmarkConfig {
 
     /**
+     * the name of the scheme currently being tested
+     */
+    private String schemeName;
+
+    /**
      * the bilinear map to use for timer benchmarks
      */
     private BilinearGroup timerBGroup;
@@ -36,7 +41,8 @@ public class BenchmarkConfig {
     private int messageLength;
 
 
-    public BenchmarkConfig(BilinearGroup timerBGroup, DebugBilinearGroup countingBGroup, int prewarmIterations, int runIterations, int messageLength) {
+    public BenchmarkConfig(String spsName, BilinearGroup timerBGroup, DebugBilinearGroup countingBGroup, int prewarmIterations, int runIterations, int messageLength) {
+        this.schemeName = spsName;
         this.timerBGroup = timerBGroup;
         this.countingBGroup = countingBGroup;
 
@@ -67,6 +73,10 @@ public class BenchmarkConfig {
 
     public int getMessageLength() {
         return messageLength;
+    }
+
+    public String getSchemeName() {
+        return schemeName;
     }
 
 

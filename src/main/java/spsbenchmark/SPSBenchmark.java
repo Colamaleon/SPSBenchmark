@@ -96,10 +96,24 @@ public class SPSBenchmark {
 
         this.benchmarkTimeResults = new HashMap<>();
 
+
         // run the appropriate benchmark
         autoRunBenchmark();
 
-        //TODO flush to txt file here
+        BenchmarkExporter.exportBenchmarkTeX(this);
+    }
+
+
+    public BenchmarkConfig getConfig() {
+        return config;
+    }
+
+    public BenchmarkMode getMode() {
+        return mode;
+    }
+
+    public BenchmarkTimes  getBenchmarkTimeResult(String operation) {
+        return benchmarkTimeResults.get(operation);
     }
 
 
