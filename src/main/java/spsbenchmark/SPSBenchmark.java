@@ -7,10 +7,8 @@ import org.cryptimeleon.math.serialization.Representation;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 
 import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.function.IntConsumer;
 
 /**
@@ -20,8 +18,6 @@ import java.util.function.IntConsumer;
  * Run the scheme a single time, counting the group operations required in each step
  */
 public class SPSBenchmark {
-
-    public enum BenchmarkMode {Time,Counting}
 
     // these are given on start up
 

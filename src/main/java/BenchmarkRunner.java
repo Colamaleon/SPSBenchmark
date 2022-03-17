@@ -14,12 +14,8 @@ import org.cryptimeleon.craco.sig.sps.kpw15.SPSKPW15SignatureScheme;
 import org.cryptimeleon.math.structures.groups.debug.DebugBilinearGroup;
 import org.cryptimeleon.math.structures.groups.elliptic.BilinearGroup;
 import org.cryptimeleon.mclwrap.bn254.MclBilinearGroup;
-import spsbenchmark.BenchmarkConfig;
-import spsbenchmark.MessageGenerator;
-import spsbenchmark.PrintBenchmarkUtils;
-import spsbenchmark.SPSBenchmark;
+import spsbenchmark.*;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.function.BiFunction;
@@ -33,6 +29,8 @@ public class BenchmarkRunner
     private static int PREWARM_ITERATIONS;
     private static int BM_ITERATIONS;
     private static int MESSAGE_LENGTH;
+
+    public static String CURRENT_SCHEME;
 
     // the bilinear group to use
     private static final MclBilinearGroup.GroupChoice GROUP_CHOICE = MclBilinearGroup.GroupChoice.BN254;
@@ -71,11 +69,11 @@ public class BenchmarkRunner
         prepareBenchmark();
 
         //find appropriate benchmark to run via reflections
-        SPSBenchmark.BenchmarkMode mode = (args[0].equals("t")) ? SPSBenchmark.BenchmarkMode.Time : SPSBenchmark.BenchmarkMode.Counting;
+        BenchmarkMode mode = (args[0].equals("t")) ? BenchmarkMode.Time : BenchmarkMode.Counting;
         String benchmarkMethodName = "run" + args[1] + "Benchmark";
 
         try{
-            Method benchmarkMethod = BenchmarkRunner.class.getMethod(benchmarkMethodName, SPSBenchmark.BenchmarkMode.class);
+            Method benchmarkMethod = BenchmarkRunner.class.getMethod(benchmarkMethodName, BenchmarkMode.class);
             benchmarkMethod.invoke(BenchmarkRunner.class, mode);
         }
         catch (Exception e) {
@@ -110,7 +108,7 @@ public class BenchmarkRunner
     /**
      * runs a benchmark for the Groth15 SPS scheme (signing G_1 elements)
      */
-    public static void runGroth1Benchmark(SPSBenchmark.BenchmarkMode mode) {
+    public static void runGroth1Benchmark(BenchmarkMode mode) {
 
         PrintBenchmarkUtils.padString(
                 String.format("Benchmark scheme %s", SPSGroth15SignatureScheme.class.getSimpleName()));
@@ -124,14 +122,14 @@ public class BenchmarkRunner
                 return new SPSGroth15SignatureScheme(params);
         };
 
-        if(mode == SPSBenchmark.BenchmarkMode.Time) {
+        if(mode == BenchmarkMode.Time) {
             //run Groth1 benchmark in timing mode
-            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+            new SPSBenchmark(sharedConfig, BenchmarkMode.Time,
                     group1MessageBlocks, constructionDelegate);
         }
         else {
             //run Groth1 benchmark in counting mode
-            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+            new SPSBenchmark(sharedConfig, BenchmarkMode.Counting,
                     group1CountingMessageBlocks, constructionDelegate);
         }
     }
@@ -140,7 +138,7 @@ public class BenchmarkRunner
     /**
      * runs a benchmark for the AGHO11 SPS scheme (signing G_1 elements)
      */
-    public static void runAGHO11Benchmark(SPSBenchmark.BenchmarkMode mode) {
+    public static void runAGHO11Benchmark(BenchmarkMode mode) {
 
         PrintBenchmarkUtils.padString(
                 String.format("Benchmark scheme %s", SPSAGHO11SignatureScheme.class.getSimpleName()));
@@ -165,14 +163,14 @@ public class BenchmarkRunner
             return new SPSAGHO11SignatureScheme(params);
         };
 
-        if(mode == SPSBenchmark.BenchmarkMode.Time) {
+        if(mode == BenchmarkMode.Time) {
             //run AGHO benchmark in timing mode
-            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+            new SPSBenchmark(sharedConfig, BenchmarkMode.Time,
                     wrappedMessages, constructionDelegate);
         }
         else {
             //run AGHO benchmark in counting mode
-            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+            new SPSBenchmark(sharedConfig, BenchmarkMode.Counting,
                     wrappedCountingMessages, constructionDelegate);
         }
     }
@@ -181,7 +179,7 @@ public class BenchmarkRunner
     /**
      * runs a benchmark for the AKOT15 SPS scheme (signing G_2 elements)
      */
-    public static void runAKOT15Benchmark(SPSBenchmark.BenchmarkMode mode) {
+    public static void runAKOT15Benchmark(BenchmarkMode mode) {
 
         PrintBenchmarkUtils.padString(
                 String.format("Benchmark scheme %s", SPSFSP2SignatureScheme.class.getSimpleName()));
@@ -197,14 +195,14 @@ public class BenchmarkRunner
             return new SPSFSP2SignatureScheme(params);
         };
 
-        if(mode == SPSBenchmark.BenchmarkMode.Time) {
+        if(mode == BenchmarkMode.Time) {
             //run AKOT15 benchmark in timing mode
-            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+            new SPSBenchmark(sharedConfig, BenchmarkMode.Time,
                     group2MessageBlocks, constructionDelegate);
         }
         else {
             //run AKOT15 benchmark in counting mode
-            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+            new SPSBenchmark(sharedConfig, BenchmarkMode.Counting,
                     group2CountingMessageBlocks, constructionDelegate);
         }
     }
@@ -212,7 +210,7 @@ public class BenchmarkRunner
     /**
      * runs a benchmark for the KPW15 SPS scheme (signing G_1 elements)
      */
-    public static void runKPW15Benchmark(SPSBenchmark.BenchmarkMode mode) {
+    public static void runKPW15Benchmark(BenchmarkMode mode) {
 
         PrintBenchmarkUtils.padString(
                 String.format("Benchmark scheme %s", SPSKPW15SignatureScheme.class.getSimpleName()));
@@ -228,14 +226,14 @@ public class BenchmarkRunner
             return new SPSKPW15SignatureScheme(params);
         };
 
-        if(mode == SPSBenchmark.BenchmarkMode.Time) {
+        if(mode == BenchmarkMode.Time) {
             //run KPW15 benchmark in timing mode
-            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Time,
+            new SPSBenchmark(sharedConfig, BenchmarkMode.Time,
                     group1MessageBlocks, constructionDelegate);
         }
         else {
             //run KPW15 benchmark in counting mode
-            new SPSBenchmark(sharedConfig, SPSBenchmark.BenchmarkMode.Counting,
+            new SPSBenchmark(sharedConfig, BenchmarkMode.Counting,
                     group1CountingMessageBlocks, constructionDelegate);
         }
     }
