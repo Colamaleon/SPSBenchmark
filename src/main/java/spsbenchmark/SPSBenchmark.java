@@ -100,7 +100,7 @@ public class SPSBenchmark {
         // run the appropriate benchmark
         autoRunBenchmark();
 
-        BenchmarkExporter.exportBenchmarkTeX(this);
+        //BenchmarkExporter.exportBenchmarkTeX(this);
     }
 
 
