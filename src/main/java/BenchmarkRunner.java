@@ -22,6 +22,17 @@ import java.util.function.BiFunction;
 
 /**
  * prepares schemes for benchmark and provides entry point
+ *
+ * Usage:
+ * BenchmarkRunner t|c <Groth1|AGHO11|AKOT15|KPW15> <messageLength> <prewarmIterations> <iterations>
+ *
+ *     t|c                          : runs the benchmark in either counting or timer mode
+ *     Groth1|AGHO11|AKOT15|KPW15   : selects a scheme for benchmarking
+ *     messageLength                : the length of messages passed to the selected scheme for signing
+ *     prewarmIterations            : runs all benchmark steps (setup,keyGen,sign,verify) for the specified number
+ *                                    of times without measuring
+ *     iterations                   : runs all benchmark steps (setup,keyGen,sign,verify) for the specified number
+ *                                    of times while measuring either time or operations performed
  */
 public class BenchmarkRunner
 {
